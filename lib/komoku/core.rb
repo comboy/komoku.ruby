@@ -1,7 +1,11 @@
 require "komoku/core/version"
+require "komoku/storage"
 
 module Komoku
-  module Core
+  class Core
+
+    def initialize(opts)
+    end
     # Your code goes here...
   end
 end

@@ -1,5 +1,5 @@
 module Komoku
-  module Core
+  class Core
     VERSION = "0.0.1"
   end
 end
