@@ -3,6 +3,11 @@ module Komoku
     module Engine
       class Base
         def initialize(opts = {})
+          @datasets = {}
+        end
+
+        def dataset(name, opts={})
+          @datasets[name] ||= Dataset.new(name, opts)
         end
 
         # Store value

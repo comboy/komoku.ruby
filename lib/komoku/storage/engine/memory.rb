@@ -10,7 +10,7 @@ module Komoku
 
         def put(key, value)
           @values[key] ||= []
-          @values[key].push [Time.now, value]
+          @values[key].push [Time.now.to_i, value]
         end
 
         def last(key)
