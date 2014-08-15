@@ -8,9 +8,9 @@ module Komoku
           @values = {}
         end
 
-        def put(key, value)
+        def put(key, value, time)
           @values[key] ||= []
-          @values[key].push [Time.now.to_i, value]
+          @values[key].push [time.to_i, value]
         end
 
         def last(key)

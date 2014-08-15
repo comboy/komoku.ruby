@@ -10,6 +10,11 @@ module Komoku
           @datasets[name] ||= Dataset.new(name, opts)
         end
 
+        # Fetch data (planned to use for multiple points)
+        def fetch
+          raise "implement me!"
+        end
+
         # Store value
         def put(key, value)
           raise "implement me!"
