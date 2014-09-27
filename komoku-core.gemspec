@@ -19,8 +19,14 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
 
-  spec.add_dependency "sequel" # FIXME optional
-  spec.add_dependency "sqlite3" # FIXME optional
+  # FIXME most dependencies should be optional
+  spec.add_dependency "sequel"
+  spec.add_dependency "sqlite3"
+  spec.add_dependency "faye-websocket"
+  spec.add_dependency "puma" # for websocket
+  #spec.add_dependency "thin" # for websocket
+  spec.add_dependency "eventmachine" # websocket client
+  #spec.add_dependency "msgpack" # websocket client
 
   spec.add_development_dependency "bundler", "~> 1.6"
   spec.add_development_dependency "rake"

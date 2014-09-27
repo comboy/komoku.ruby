@@ -11,6 +11,7 @@ module Komoku
       # TODO cache
     end
 
+    # Returns last value of the key
     def get(key)
       # TODO cache
       @engine.get key.to_s
