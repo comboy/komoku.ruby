@@ -69,5 +69,15 @@ describe Komoku::Storage do
       data.map(&:last).should == [1,1,3]
     end
 
+    it 'shows stats' do
+      @storage.put :foo, 1
+      @storage.put :foo, 2
+      @storage.put :bar, 3
+
+      stats = @storage.stats
+      stats[:keys_count].should == 2
+      stats[:data_points_count].should == 3
+    end
+
   end
 end

@@ -31,5 +31,11 @@ module Komoku
       @engine.keys.sort
     end
 
+    def stats
+      common_stats = {
+        keys_count: keys.count
+      }.merge(@engine.stats || {})
+    end
+
   end
 end

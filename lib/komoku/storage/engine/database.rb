@@ -37,6 +37,12 @@ module Komoku
           @db[:keys].map{|k| k[:name]}
         end
 
+        def stats
+          {
+            data_points_count: @db[:numeric_data_points].count
+          }
+        end
+
         protected
 
         def key_id(name)
