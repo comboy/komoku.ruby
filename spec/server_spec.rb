@@ -5,16 +5,7 @@ require 'komoku/server'
 
 describe Komoku::Server do
   context 'connection' do
-    before do
-      @server_thread = Thread.new do
-        Komoku::Server::WebsocketServer.start
-      end
-      sleep 1 # TODO use some hook on server started to avoid sleep
-    end
-
-    after do
-      @server_thread.kill
-    end
+    run_websocket_server
 
     it "should accept websocket connections" do
       connected = false

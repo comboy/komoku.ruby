@@ -35,6 +35,12 @@ module Komoku
         @logger ||= Logger.new nil
       end
 
+      # TODO switch to instance
+      # TODO handle case when not started yet
+      def self.stop
+        @server.stop
+      end
+
       def self.start(opts = {})
         @storage = opts[:storage] || Storage.new
         @dupa = 'bla'
@@ -94,8 +100,10 @@ module Komoku
         binder = Puma::Binder.new(events)
         binder.parse(["tcp://0.0.0.0:#{port}"], App) # FIXME configurable listen addr
         server = Puma::Server.new(app, events)
+        @server = server
         server.binder = binder
-        server.run.join
+        @thread = server.run # join
+        true
 
         # Thin
         #EventMachine.schedule do

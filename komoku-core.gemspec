@@ -34,4 +34,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "ZenTest"
   spec.add_development_dependency "rspec-autotest"
   spec.add_development_dependency "wirble"
+  spec.add_development_dependency "did_you_mean"
 end
