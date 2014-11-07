@@ -27,7 +27,7 @@ module Komoku
         end
 
         def self.log(msg)
-          puts "APP LOG: #{msg}"
+          # puts "APP LOG: #{msg}"
         end
       end
 
@@ -43,11 +43,10 @@ module Komoku
 
       def self.start(opts = {})
         @storage = opts[:storage] || Storage.new
-        @dupa = 'bla'
-        blah = 323
         app = lambda do |env|
           if Faye::WebSocket.websocket?(env)
-            ws = Faye::WebSocket.new(env, ['irc', 'xmpp'], :ping => 5)
+            # TODO research ping - when positive it was slowing down some tests by what ping was set to
+            ws = Faye::WebSocket.new(env, ['irc', 'xmpp'], :ping => 0)
             handler = nil
             logger.info [:open, ws.url, ws.version, ws.protocol].pretty_inspect
             #handler = SocketHandler.new ws, env
@@ -61,10 +60,12 @@ module Komoku
             ws.onmessage = lambda do |event|
               logger.info "=> #{event.data}"
 
-              json = JSON.load event.data
+              begin
+                json = JSON.load event.data
+              rescue
+                ws.send({err: 'Parsing JSON failed'})
+              end
               handler.received(json)
-
-              ws.send "yup yup yup".to_json
             end
 
             ws.onclose = lambda do |event|
@@ -73,13 +74,7 @@ module Komoku
               #handler.on_close
             end
 
-            #ws.onopen = lambda do
-              #sh = SocketHandler.new ws
-              #p "watta"
-            #end
-
             ws.rack_response
-
           else
             # FIXME put something reasonable here
             static.call(env)

@@ -11,7 +11,6 @@ module Komoku
       end
 
       def received(data)
-        puts "HANDLER GOT: #{data}"
         unless data.kind_of? Hash
           send error: 'Incorrect message'
           return
@@ -23,7 +22,7 @@ module Komoku
         # => {get: {key: 'foo'}}
         # <= 123
         when 'get'
-          x = @storage.get data['get']
+          x = @storage.get data['get']['key']
           # TODO agent will need to fetch keys and deserialize this properly i.e. create bigdecimal from string if apropriate
           send x
 
