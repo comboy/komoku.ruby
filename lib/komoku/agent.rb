@@ -2,6 +2,8 @@ require 'eventmachine'
 require 'faye/websocket'
 
 module Komoku
+
+  # TODO adding abstraction layer for different kind of connection types will change it quite a bit (API stays)
   class Agent
 
     def initialize(opts = {})
@@ -49,15 +51,22 @@ module Komoku
     end
 
     def connected?
-      @connected == true
+      !!@connected
     end
 
-    def put
-      # TODO
+    def put(key, value, time = Time.now)
+      # TODO handle time param
+      @ws.send({put: {key: key, value: value}}.to_json)
+      ret = @messages.pop
+      JSON.load(ret) == 'ack' # TODO error handling
     end
 
-    def get
-      # TODO
+    def get(key)
+      @ws.send({get: {key: key}}.to_json)
+      ret = @messages.pop
+      # TODO check if not error
+      # FIXME we may need to convert it to proper value type I guess?
+      JSON.load(ret)
     end
   end
 end
