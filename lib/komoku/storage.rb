@@ -3,7 +3,8 @@ require 'komoku/storage/engine'
 module Komoku
   class Storage
     def initialize(opts={})
-      @engine = opts[:engine] || Engine::Memory.new
+      # use seqlite in memory engine if nothing is provided
+      @engine = opts[:engine] || Komoku::Storage::Engine::Database.new(db: Sequel.sqlite)
     end
 
     def put(key, value, time = Time.now)

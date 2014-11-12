@@ -29,7 +29,7 @@ module Komoku
         end
 
         def last(key)
-          ret = @db[:numeric_data_points].where(key_id: key_id(key)).first
+          ret = @db[:numeric_data_points].where(key_id: key_id(key)).order(Sequel.desc(:id)).first
           ret && [ret[:time], ret[:value]]
         end
 
@@ -71,10 +71,13 @@ module Komoku
           end
 
           @db.create_table?(:numeric_data_points) do
+            primary_key :id
             column :key_id, :integer
-            column :value, 'NUMERIC(10)'
+            column :value, :float
             column :time, :timestamp
           end
+
+          # TODO FIXME indexes are quite important indeed
         end
       end
     end

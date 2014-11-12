@@ -1,5 +1,6 @@
 require 'eventmachine'
 require 'faye/websocket'
+require 'json'
 
 module Komoku
 
@@ -45,7 +46,6 @@ module Komoku
       end # thread
 
       state = @ws_events.pop
-      pp state # FIXME
       raise "some connection error" unless state == :connected # TODO some nicer exception + more info 
       @connected = true
     end
@@ -65,7 +65,7 @@ module Komoku
       @ws.send({get: {key: key}}.to_json)
       ret = @messages.pop
       # TODO check if not error
-      # FIXME we may need to convert it to proper value type I guess?
+      # TODO we may need to convert it to proper value type I guess?
       JSON.load(ret)
     end
   end

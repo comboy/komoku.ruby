@@ -1,6 +1,14 @@
 # Komoku::Core
 
-TODO: Write a gem description
+Work in progress
+
+# Spec draft
+
+Key types:
+
+* numeric
+* on/off (boolean)
+* string (reperesanting state, version or whatever)
 
 ## Installation
 

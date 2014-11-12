@@ -22,9 +22,15 @@ module Komoku
         # => {get: {key: 'foo'}}
         # <= 123
         when 'get'
-          x = @storage.get data['get']['key']
-          # TODO agent will need to fetch keys and deserialize this properly i.e. create bigdecimal from string if apropriate
-          send x
+          # TODO helper for wrapping everything like that
+          # FIXME API CHANGE - we cannot just be returning values directly, because string would be not recognizable from 'err'
+          begin
+            x = @storage.get data['get']['key']
+            # TODO agent will need to fetch keys and deserialize this properly i.e. create bigdecimal from string if apropriate
+            send x
+          rescue
+            send 'err'
+          end
 
         # => {put: {key: 'foo', value: 'blah'}}
         # <= 'ack'

@@ -9,7 +9,7 @@ describe Komoku::Agent do
     run_websocket_server
 
     it "should connect" do
-      agent = Komoku::Agent.new server: "ws://127.0.0.1:7373/"
+      agent = Komoku::Agent.new server: ws_url
       agent.connect.should == true
     end
   end
@@ -19,7 +19,7 @@ describe Komoku::Agent do
 
     it "should fail" do
       expect do
-        agent = Komoku::Agent.new server: "ws://127.0.0.1:7373/"
+        agent = Komoku::Agent.new server: ws_url
         agent.connect
       end.to raise_error
     end
@@ -29,7 +29,7 @@ describe Komoku::Agent do
     run_websocket_server
 
     it "should be a ble to store data" do
-      agent = Komoku::Agent.new server: "ws://127.0.0.1:7373/"
+      agent = Komoku::Agent.new server: ws_url
       agent.connect
       agent.get(:foo).should == nil
       agent.get('foo').should == nil
@@ -37,6 +37,13 @@ describe Komoku::Agent do
       agent.get(:foo).should == 239
     end
 
+    it "should properly return last stored value" do
+      agent = Komoku::Agent.new server: ws_url
+      agent.connect
+      agent.put(:foo, 123).should == true
+      agent.put(:foo, 456).should == true
+      agent.get(:foo).should == 456
+    end
   end
 
 end

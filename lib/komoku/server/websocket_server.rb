@@ -81,7 +81,7 @@ module Komoku
           end
         end
 
-        port   = 7373 # TODO config
+        port   = opts[:port] || 7373 # TODO config
         secure = false # ARGV[1] == 'ssl'
         engine = 'puma'
 

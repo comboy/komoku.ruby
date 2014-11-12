@@ -1,6 +1,7 @@
 require 'komoku/core'
 require 'fileutils'
 require 'did_you_mean'
+require 'timeout'
 
 
 tmp_db = "tmp/test.db"
@@ -80,6 +81,10 @@ module TestsHelpers
     client
   end
 
+  def ws_url
+    "ws://127.0.0.1:7373/"
+  end
+
 end
 
 RSpec.configure do |config|
@@ -88,4 +93,10 @@ RSpec.configure do |config|
   end
   config.extend TestsHelpers
   config.include TestsHelpers
+
+  # at this point some errors may cause it to hang indefinitely so let's get the backtrace right away
+  config.around(:each) do |example|
+    Timeout::timeout(5) { example.run }
+  end
+
 end
