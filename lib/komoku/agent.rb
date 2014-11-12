@@ -5,11 +5,16 @@ require 'json'
 module Komoku
 
   # TODO adding abstraction layer for different kind of connection types will change it quite a bit (API stays)
+  # should probably also handle accessing storage directly (running it)
   class Agent
 
+    # Options:
+    # * server - server url e.g. ws://127.0.0.1:1234/
+    # * scope - prepend all keys names with given "#{scope}__"
     def initialize(opts = {})
       # TODO U4 validate if server url is valid
       @server = opts[:server]
+      @scope = opts[:scope]
       # TODO choose dataset
     end
 
@@ -56,17 +61,24 @@ module Komoku
 
     def put(key, value, time = Time.now)
       # TODO handle time param
-      @ws.send({put: {key: key, value: value}}.to_json)
+      @ws.send({put: {key: scoped_name(key), value: value}}.to_json)
       ret = @messages.pop
       JSON.load(ret) == 'ack' # TODO error handling
     end
 
     def get(key)
-      @ws.send({get: {key: key}}.to_json)
+      @ws.send({get: {key: scoped_name(key)}}.to_json)
       ret = @messages.pop
       # TODO check if not error
       # TODO we may need to convert it to proper value type I guess?
       JSON.load(ret)
+    end
+
+    protected
+
+    # prepend key name with scope if there is some scope set
+    def scoped_name(name)
+      @scope ? "#{@scope}__#{name}" : name
     end
   end
 end

@@ -46,4 +46,24 @@ describe Komoku::Agent do
     end
   end
 
+  context "scopes" do
+    # TODO run it on something less heavy
+    run_websocket_server
+
+    it "should be a ble to store data" do
+      agent1 = Komoku::Agent.new server: ws_url
+      agent1.connect
+      agent2 = Komoku::Agent.new server: ws_url, scope: 's1'
+      agent2.connect
+      agent3 = Komoku::Agent.new server: ws_url, scope: 's2'
+      agent3.connect
+      agent1.put(:foo, 123)
+      agent2.get(:foo).should == nil
+      agent2.put(:foo, 2)
+      agent2.get(:foo).should == 2
+      agent3.get(:foo).should == nil
+      agent1.get(:foo).should == 123
+    end
+  end
+
 end

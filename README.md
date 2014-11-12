@@ -1,6 +1,8 @@
 # Komoku::Core
 
-Work in progress
+Monitoring and data storage system used for home automation. Complete mess and not working yet, don't even try to dive in.
+
+This is going to be split into separate gems, komoku-core, komoku-agent, komoku-server, but until then keeping everything in one place make development easier.
 
 # Spec draft
 
@@ -26,12 +28,5 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+nope
 
-## Contributing
-
-1. Fork it ( https://github.com/[my-github-username]/komoku-core/fork )
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create a new Pull Request
