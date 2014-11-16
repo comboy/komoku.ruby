@@ -74,6 +74,17 @@ module Komoku
       JSON.load(ret)
     end
 
+    # THINK assuming scope also applies to events, this may need some second thought
+    def subscribe(event)
+      @ws.send({sub: {event: scoped_name(event)}}.to_json)
+      ret = @messages.pop
+      JSON.load(ret) == 'ack' # TODO error handling
+    end
+
+    def publish(event, data = {})
+      @ws.send({pub: {event: scoped_name(event), data: data}}.to_json)
+    end
+
     protected
 
     # prepend key name with scope if there is some scope set

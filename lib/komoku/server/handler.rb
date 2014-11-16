@@ -38,6 +38,12 @@ module Komoku
           # TODO check args
           @storage.put data['put']['key'], data['put']['value']
           send 'ack'
+
+        # => {sub: {event: 'foo'}}
+        # <= 'ack'
+        when 'sub'
+          @storage.subscribe(data['sub']['event']) do
+          end
         end
       end
 

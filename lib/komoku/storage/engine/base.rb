@@ -25,6 +25,12 @@ module Komoku
           raise "implement me!"
         end
 
+        # Subscribe to key value changes
+        def on_change(key, &block)
+          raise "implement me!"
+          # TODO perhaps Base should include default implementation that specific storage can overwrite
+        end
+
         # Return last stored value.
         def get(key)
           last = last(key)

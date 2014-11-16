@@ -26,6 +26,11 @@ module Komoku
       @engine.fetch(key, o.merge(limit: 100))
     end
 
+    # TODO THINK should implementation of events be here or specific engine?
+    def on_change(key, &block)
+      @engine.on_change(key.to_s, &block)
+    end
+
     # List all stored keys
     # TODO perhaps we would like to also get info about type & number of stored values?
     def keys

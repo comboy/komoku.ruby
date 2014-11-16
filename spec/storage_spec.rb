@@ -78,6 +78,56 @@ describe Komoku::Storage do
       stats[:keys_count].should == 2
       stats[:data_points_count].should == 3
     end
+  end
+
+  context "change notifications" do
+    before do
+      @storage = Komoku::Storage.new engine: Komoku::Storage::Engine::Database.new(db: Sequel.sqlite)
+    end
+
+    it "notifies on key change" do
+      @storage.put :foo, 1
+      notified = false
+      @storage.on_change(:foo) { notified = true }
+      @storage.put :foo, 2
+      notified.should == true
+    end
+
+    it "notifies on key change on first insert" do
+      notified = false
+      @storage.on_change(:foo) { notified = true }
+      @storage.put :foo, 2
+      notified.should == true
+    end
+
+    it "doesn't notify if no value change" do
+      @storage.put :foo, 1
+      notified = false
+      @storage.on_change(:foo) { notified = true }
+      @storage.put :foo, 1
+      notified.should == false
+    end
+
+    it "doesn't notify when new value is older" do
+      @storage.put :foo, 1
+      notified = false
+      @storage.on_change(:foo) { notified = true }
+      @storage.put :foo, 2, Time.now - 1
+      notified.should == false
+    end
+
+    it "provides correct arguments in the notification" do
+      @storage.put :foo, 1
+      notified = false
+      @storage.on_change(:foo) do |key, prev, curr|
+        key.should == 'foo'
+        prev.should == 1
+        curr.should == 2
+        notified = true
+      end
+      @storage.put :foo, 2
+      notified.should == true
+    end
 
   end
 end

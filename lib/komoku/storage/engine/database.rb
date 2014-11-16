@@ -12,6 +12,7 @@ module Komoku
           @db = opts[:db] || Sequel.connect("sqlite://tmp/test.db")
           #@db.loggers << Logger.new(STDOUT)
           prepare_database
+          @change_notifications = {}
           super
         end
 
@@ -25,10 +26,17 @@ module Komoku
         end
 
         def put(key, value, time)
+          # read previous values if we need them for notification
+          last_time, last_value = last(key) if @change_notifications[key]
+
           @db[:numeric_data_points].insert(key_id: key_id(key), value: value, time: time)
+
+          # notify about the change
+          notify_change key, last_value, value if @change_notifications[key] && ( last_time.nil? || (time > last_time) && (last_value != value) )
         end
 
         def last(key)
+          # OPTIMIZE caching
           ret = @db[:numeric_data_points].where(key_id: key_id(key)).order(Sequel.desc(:id)).first
           ret && [ret[:time], ret[:value]]
         end
@@ -43,6 +51,11 @@ module Komoku
           }
         end
 
+        def on_change(key, &block)
+          @change_notifications[key] ||= []
+          @change_notifications[key] << block
+        end
+
         protected
 
         def key_id(name)
@@ -52,6 +65,15 @@ module Komoku
           else
             # We need to create a new key, insert returns the id
             @db[:keys].insert(name: name)
+          end
+        end
+
+        def notify_change(key, last_value, value)
+          return unless @change_notifications[key]
+          @change_notifications[key].each do |block|
+            # we provide key as one of the args in case some pattern matching is implmented later e.g. notify on foo__*
+            # TODO rescue exceptions?
+            block.call(key, last_value, value)
           end
         end
 
