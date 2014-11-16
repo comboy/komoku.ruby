@@ -31,6 +31,15 @@ describe Komoku::Server do
       ret = wsc.read
     end
 
+    it "should handle on_change subscription" do
+      wsc = ws_client
+      wsc.send({sub: {key: 'foo'}}.to_json)
+      wsc.send({put: {key: 'foo', value: 1}}.to_json)
+      msgs = Array.new(2) { JSON.load(wsc.read) }
+      msgs.include?('ack').should == true
+      msgs.include?({'pub' => {'key' => 'foo', 'prev' => nil, 'curr' => 1}}).should == true
+    end
+
     #TODO should handle incorrect msg somehow
   end
 end

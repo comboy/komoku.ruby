@@ -15,6 +15,7 @@ module Komoku
       # TODO U4 validate if server url is valid
       @server = opts[:server]
       @scope = opts[:scope]
+      @subscriptions = {}
       # TODO choose dataset
     end
 
@@ -40,9 +41,22 @@ module Komoku
             end
 
             @ws.on :message do |event|
-              data = event.data
+              data = JSON.load(event.data)
               @ws_events.push [:message, event]
-              @messages.push data
+              if data.kind_of?(Hash) && data['pub'] # it's some event, handle separately
+                dp = data['pub']
+                if dp['key']
+                  raise "agent was not subscribed to this key [#{db['key']}]" unless @subscriptions[dp['key']]
+                  @subscriptions[dp['key']].each do |blk| # TODO 
+                    # TODO THINK should we 'unscope' this key if scope is used? 
+                    # but then what about subs outside agent scope? should  they be possible?
+                    # perhaps scope should be some interface... agent.scope('foo')
+                    blk.call(dp['key'], dp['prev'], dp['curr']) 
+                  end
+                end
+              else # non-event message
+                @messages.push data
+              end
             end
           end # EM
         rescue
@@ -62,23 +76,26 @@ module Komoku
     def put(key, value, time = Time.now)
       # TODO handle time param
       @ws.send({put: {key: scoped_name(key), value: value}}.to_json)
-      ret = @messages.pop
-      JSON.load(ret) == 'ack' # TODO error handling
+      @messages.pop == 'ack' # TODO error handling
     end
 
     def get(key)
       @ws.send({get: {key: scoped_name(key)}}.to_json)
-      ret = @messages.pop
       # TODO check if not error
       # TODO we may need to convert it to proper value type I guess?
-      JSON.load(ret)
+      @messages.pop
+    end
+
+    def on_change(key, &block)
+      @ws.send({sub: {key: scoped_name(key)}}.to_json)
+      @subscriptions[scoped_name(key)] ||= []
+      @subscriptions[scoped_name(key)] << block
     end
 
     # THINK assuming scope also applies to events, this may need some second thought
     def subscribe(event)
       @ws.send({sub: {event: scoped_name(event)}}.to_json)
-      ret = @messages.pop
-      JSON.load(ret) == 'ack' # TODO error handling
+      @messages.pop == 'ack' # TODO error handling
     end
 
     def publish(event, data = {})
@@ -89,7 +106,7 @@ module Komoku
 
     # prepend key name with scope if there is some scope set
     def scoped_name(name)
-      @scope ? "#{@scope}__#{name}" : name
+      @scope ? "#{@scope}__#{name}" : name.to_s
     end
   end
 end

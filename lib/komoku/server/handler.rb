@@ -8,6 +8,7 @@ module Komoku
         @storage = opts[:storage]
         # Conn must respond to #send
         @conn = opts[:conn]
+        @subscriptions = []
       end
 
       def received(data)
@@ -42,13 +43,27 @@ module Komoku
         # => {sub: {event: 'foo'}}
         # <= 'ack'
         when 'sub'
-          @storage.subscribe(data['sub']['event']) do
+          s = data['sub']
+          if s['key']
+            @subscriptions << @storage.on_change(s['key']) do |key, prev, curr|
+              send({pub: {key: key, prev: prev, curr: curr}})
+            end
+          elsif s['event']
+            # TODO subscribe to event
+          else
+            send 'err' # no key or event
           end
+          send 'ack'
+
+        # TODO unsubscribe method
         end
       end
 
       def send(data)
         @conn.send data.to_json # FIXME serialization must happen in adapter
+      end
+
+      def close
       end
     end # Handler
 

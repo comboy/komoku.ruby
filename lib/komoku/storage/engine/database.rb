@@ -54,6 +54,12 @@ module Komoku
         def on_change(key, &block)
           @change_notifications[key] ||= []
           @change_notifications[key] << block
+          [key, block]
+        end
+
+        def unsubscribe(subscription)
+          key, block = subscription
+          !! @change_notifications[key].delete(block)
         end
 
         protected

@@ -28,7 +28,7 @@ describe Komoku::Agent do
   context "put and get" do
     run_websocket_server
 
-    it "should be a ble to store data" do
+    it "should be able to store data" do
       agent = Komoku::Agent.new server: ws_url
       agent.connect
       agent.get(:foo).should == nil
@@ -50,7 +50,7 @@ describe Komoku::Agent do
     # TODO run it on something less heavy
     run_websocket_server
 
-    it "should be a ble to store data" do
+    it "keeps scopes separate" do
       agent1 = Komoku::Agent.new server: ws_url
       agent1.connect
       agent2 = Komoku::Agent.new server: ws_url, scope: 's1'
@@ -64,6 +64,35 @@ describe Komoku::Agent do
       agent3.get(:foo).should == nil
       agent1.get(:foo).should == 123
     end
+  end
+
+  context "subscriptions" do
+    run_websocket_server
+
+    it "handles on change notifications properly" do
+      agent = Komoku::Agent.new server: ws_url
+      agent.connect
+      notified = false
+      agent.on_change(:foo) do |key, prev, curr|
+        notified = true
+        key.should == 'foo'
+        prev.should == nil
+        curr.should == 2
+      end
+      agent.put :foo, 2
+    end
+
+    it "handles on change from different agent" do
+      agent1 = Komoku::Agent.new server: ws_url
+      agent2 = Komoku::Agent.new server: ws_url
+      agent1.connect
+      agent2.connect
+      notified = false
+      agent1.on_change(:moo) { notified = true }
+      agent2.put :moo, 1
+      notified.should == true
+    end
+
   end
 
 end

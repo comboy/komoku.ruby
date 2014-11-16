@@ -93,6 +93,17 @@ describe Komoku::Storage do
       notified.should == true
     end
 
+    it "notifies multiple times" do
+      @storage.put :foo, 1
+      notified = false
+      @storage.on_change(:foo) { notified = true }
+      @storage.put :foo, 2
+      notified.should == true
+      notified = false
+      @storage.put :foo, 3
+      notified.should == true
+    end
+
     it "notifies on key change on first insert" do
       notified = false
       @storage.on_change(:foo) { notified = true }
@@ -127,6 +138,17 @@ describe Komoku::Storage do
       end
       @storage.put :foo, 2
       notified.should == true
+    end
+
+    it "unsubscribes properly" do
+      notified = false
+      subscription = @storage.on_change(:foo) { notified = true }
+      @storage.put :foo, 2
+      notified.should == true
+      notified = false
+      @storage.unsubscribe subscription
+      @storage.put :foo, 3
+      notified.should == false
     end
 
   end

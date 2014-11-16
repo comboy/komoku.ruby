@@ -31,6 +31,11 @@ module Komoku
       @engine.on_change(key.to_s, &block)
     end
 
+    # TODO same as on_change
+    def unsubscribe(subscription)
+      @engine.unsubscribe(subscription)
+    end
+
     # List all stored keys
     # TODO perhaps we would like to also get info about type & number of stored values?
     def keys
