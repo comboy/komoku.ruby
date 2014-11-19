@@ -9,6 +9,7 @@ File.unlink tmp_db if File.exists? tmp_db
 
 FileUtils.mkdir_p "tmp"
 
+
 module TestsHelpers
 
   class WsClient
@@ -63,15 +64,41 @@ module TestsHelpers
     end
   end
 
-  def run_websocket_server
+  class FakeSlowLogger
+    def initialize(lag = 1)
+      @lag = lag
+    end
+
+    def method_missing(name, *args)
+      sleep @lag
+      return true
+    end
+  end
+
+  def start_ws_server(opts = {})
+    @server = Komoku::Server::WebsocketServer.start
+    if opts[:lag]
+      Komoku::Server::WebsocketServer.logger = FakeSlowLogger.new opts[:lag]
+    else
+      Komoku::Server::WebsocketServer.logger = Logger.new nil
+    end
+    sleep 1 # TODO use some hook on server started to avoid sleep
+  end
+
+  def stop_ws_server
+    Komoku::Server::WebsocketServer.stop
+    # faye websocket stacrts eventmachine, unfortunately we have to stop it manually
+    EventMachine.stop rescue nil # can raise when EM is not started because server was started but there was no request
+    sleep 0.5 # FIXME no sleep at work
+  end
+
+  def run_websocket_server(opts={})
     before do
-      @server = Komoku::Server::WebsocketServer.start
-      sleep 1 # TODO use some hook on server started to avoid sleep
+      start_ws_server(opts)
     end
 
     after do
-      Komoku::Server::WebsocketServer.stop
-      sleep 0.1 # FIXME no sleep at work
+      stop_ws_server
     end
   end
 
@@ -96,7 +123,7 @@ RSpec.configure do |config|
 
   # at this point some errors may cause it to hang indefinitely so let's get the backtrace right away
   config.around(:each) do |example|
-    Timeout::timeout(5) { example.run }
+    Timeout::timeout(10) { example.run }
   end
 
 end

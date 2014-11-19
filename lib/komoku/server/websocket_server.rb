@@ -22,6 +22,8 @@ module Komoku
     #TODO some abstraction layer for different kind of interfaces (REST and stuff)
     class WebsocketServer
 
+      attr_accessor :logger
+
       class App
         def self.engine
         end
@@ -35,10 +37,14 @@ module Komoku
         @logger ||= Logger.new nil
       end
 
+      def self.logger=(logger)
+        @logger = logger
+      end
+
       # TODO switch to instance
       # TODO handle case when not started yet
       def self.stop
-        @server.stop
+        @server.stop true
       end
 
       def self.start(opts = {})

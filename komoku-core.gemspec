@@ -25,6 +25,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "faye-websocket"
   spec.add_dependency "puma" # for websocket
   #spec.add_dependency "thin" # for websocket
+  #spec.add_dependency "goliath" # for websocket
   spec.add_dependency "eventmachine" # websocket client
   #spec.add_dependency "msgpack" # websocket client
 
