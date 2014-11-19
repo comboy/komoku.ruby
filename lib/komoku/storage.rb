@@ -19,7 +19,17 @@ module Komoku
     end
 
     # TODO FIXME total mess
-    def fetch(key, opts={})
+    def fetch(key, opts={}, more_opts={})
+      # fetch :foo, :last_24h
+      # fetch :foo, :last_24h, resolution: '1m'
+      if opts.kind_of?(Symbol) || opts.kind_of?(String)
+        preset = opts.to_sym
+        case preset
+        when :last_24h
+          opts = {since: (Time.now - 24*60)}
+        end
+      end
+
       o = {}
       o[:since] = opts[:since] if opts[:since]
       o = opts # FIXME do some validation on l imits max points and magic

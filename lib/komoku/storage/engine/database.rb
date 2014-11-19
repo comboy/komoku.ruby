@@ -20,16 +20,19 @@ module Komoku
           scope = @db[:numeric_data_points].where(key_id: key_id(key))
           scope = scope.where('time > :since', since: opts[:since]) if opts[:since]
           # TODO use date_trunc for pg or do some reasonable indexes
-          scope = scope.select_group(Sequel.lit "strftime('%s',time)/60").select_append { avg(value).as(value) } if opts[:resolution]
+          scope = scope.select_group(Sequel.lit "strftime('%s',time)/60").select_append { avg(value_avg).as(value_avg) } if opts[:resolution]
           rows = scope.all
-          rows.map {|r| [r[:time], r[:value]]}
+          rows.map {|r| [r[:time], r[:value_avg]]}
         end
 
         def put(key, value, time)
           # read previous values if we need them for notification
           last_time, last_value = last(key) if @change_notifications[key]
 
-          @db[:numeric_data_points].insert(key_id: key_id(key), value: value, time: time)
+          # FIXME TODO steps definitions
+          default_step = 5 # seconds
+
+          @db[:numeric_data_points].insert(key_id: key_id(key), value_avg: value, time: time, value_count: 1, value_max: value, value_min: value) #TODO fill in other fields
 
           # notify about the change
           notify_change key, last_value, value if @change_notifications[key] && ( last_time.nil? || (time > last_time) && (last_value != value) )
@@ -38,7 +41,7 @@ module Komoku
         def last(key)
           # OPTIMIZE caching
           ret = @db[:numeric_data_points].where(key_id: key_id(key)).order(Sequel.desc(:id)).first
-          ret && [ret[:time], ret[:value]]
+          ret && [ret[:time], ret[:value_avg]]
         end
 
         def keys
@@ -93,19 +96,22 @@ module Komoku
           @db.create_table?(:keys) do
             #column :id, :primary_key
             primary_key :id
-            column :dataset_id, :integer
+            column :dataset_id, :integer, index: true
             column :name, :string
-            column :key_type, :string
+            column :key_type, :string, index: true
           end
 
           @db.create_table?(:numeric_data_points) do
             primary_key :id
             column :key_id, :integer
-            column :value, :float
-            column :time, :timestamp
+            column :time, :timestamp, index: true
+            column :value_avg, :double
+            column :value_count, :integer
+            column :value_max, :double
+            column :value_min, :double
+            column :value_step, :integer
           end
 
-          # TODO FIXME indexes are quite important indeed
         end
       end
     end
