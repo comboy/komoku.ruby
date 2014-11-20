@@ -14,25 +14,6 @@ describe Komoku::Agent do
     end
   end
 
-  #context "queue" do
-    #it "should handle disconnection" do
-      #start_ws_server
-      #agent = Komoku::Agent.new server: ws_url
-      #agent.connect.should == true
-      #agent.put(:foo, 2)
-      ##agent.get(:foo).should == 2
-      #puts "NOW ABOUT TO STOPPED"
-      #sleep 1
-      #stop_ws_server
-      #puts "NOW STOPPED"
-      #sleep 2
-      #agent.put(:foo, 3)
-      #puts "GET: #{agent.get(:foo)}"
-      #puts "PUT: #{agent.put(:boo, 2)}"
-      #puts "GETBOO: #{agent.get(:boo)}"
-    #end
-  #end
-
   context "connection failure" do
     # no websocket server running
 
@@ -150,20 +131,19 @@ describe Komoku::Agent do
       stop_ws_server
     end
 
-    # TODO reconnect
-    #it "can handle disconnection" do
-      #puts "CAN IT REALLY?"
-      #start_ws_server
-      #agent = Komoku::Agent.new server: ws_url, reconnect: true
-      #agent.connect
-      #agent.put :foo, 1
-      #stop_ws_server
-      #start_ws_server
-      #agent.put :foo, 2
-      #sleep 0.2
-      #agent.get(:foo).should == 2
-      #stop_ws_server
-    #end
+    it "can handle disconnection" do
+      start_ws_server
+      agent = Komoku::Agent.new server: ws_url, reconnect: true
+      agent.connect
+      agent.put :foo, 1
+      stop_ws_server
+      start_ws_server
+      agent.put :foo, 2
+      sleep 0.2
+      agent.get(:foo).should == 2
+      agent.disconnect
+      stop_ws_server
+    end
 
   end
 

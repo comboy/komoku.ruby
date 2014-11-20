@@ -17,6 +17,7 @@ module Komoku
       @server = opts[:server]
       @scope = opts[:scope]
       @async = opts[:async].nil? ? true : opts[:async]
+      # TODO make reconnect a default option, it will need some fixing in tests
       @opts = opts
       @subscriptions = {}
       # TODO choose dataset
@@ -45,51 +46,7 @@ module Komoku
       @connection_thread = Thread.new do
         begin
           EM.run do
-            @ws = Faye::WebSocket::Client.new(@server)
-            @ws.on :open do |event|
-              @connected = true
-              @ws_events.push :connected
-            end
-
-            @ws.on :close do |event|
-              @connected = false
-              @ws_events.push :disconnected
-              # TODO make reconnect a default option, it will need some fixing in tests
-              if false # @opts[:reconnect]
-                loop do
-                  break unless @should_be_connected
-                  sleep 0.1
-                  puts "should be connected!"
-                  begin
-                    Timeout::timeout(1) do
-                      # TODO try reconnect
-                      break
-                    end
-                  rescue Timeout::Error
-                    puts "....timeout"
-                  end
-                end
-              end
-            end
-
-            @ws.on :message do |event|
-              data = JSON.load(event.data)
-              @ws_events.push [:message, event]
-              if data.kind_of?(Hash) && data['pub'] # it's some event, handle separately
-                dp = data['pub']
-                if dp['key']
-                  raise "agent was not subscribed to this key [#{db['key']}]" unless @subscriptions[dp['key']]
-                  @subscriptions[dp['key']].each do |blk| # TODO 
-                    # TODO THINK should we 'unscope' this key if scope is used?
-                    # but then what about subs outside agent scope? should  they be possible?
-                    # perhaps scope should be some interface... agent.scope('foo')
-                    blk.call(dp['key'], dp['prev'], dp['curr'])
-                  end
-                end
-              else # non-event message
-                @messages.push data
-              end
-            end
+            init_connection
           end # EM
         rescue
           @ws_events.push [:exception, $!]
@@ -113,6 +70,13 @@ module Komoku
       raise "some connection error" unless state == :connected # TODO some nicer exception + more info 
       @should_be_connected = true
       return true
+    end
+
+    def disconnect
+      return false unless @connected
+      @should_be_connected = false
+      @ws.close
+      true
     end
 
     def async?
@@ -164,6 +128,42 @@ module Komoku
     #end
 
     protected
+
+    def init_connection
+      @ws = Faye::WebSocket::Client.new(@server)
+      @ws.on :open do |event|
+        @connected = true
+        @ws_events.push :connected
+      end
+
+      @ws.on :close do |event|
+        @connected = false
+        @ws_events.push :disconnected
+        if @opts[:reconnect] && @should_be_connected
+          sleep 0.1
+          init_connection
+        end
+      end
+
+      @ws.on :message do |event|
+        data = JSON.load(event.data)
+        @ws_events.push [:message, event]
+        if data.kind_of?(Hash) && data['pub'] # it's some event, handle separately
+          dp = data['pub']
+          if dp['key']
+            raise "agent was not subscribed to this key [#{db['key']}]" unless @subscriptions[dp['key']]
+            @subscriptions[dp['key']].each do |blk| # TODO 
+              # TODO THINK should we 'unscope' this key if scope is used?
+              # but then what about subs outside agent scope? should  they be possible?
+              # perhaps scope should be some interface... agent.scope('foo')
+              blk.call(dp['key'], dp['prev'], dp['curr'])
+            end
+          end
+        else # non-event message
+          @messages.push data
+        end
+      end
+    end
 
     # prepend key name with scope if there is some scope set
     def scoped_name(name)
