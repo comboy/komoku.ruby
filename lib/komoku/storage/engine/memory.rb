@@ -1,4 +1,4 @@
-require 'komoku/storage/engine/base'
+require_relative 'base'
 
 module Komoku
   class Storage

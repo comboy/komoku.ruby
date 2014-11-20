@@ -64,32 +64,18 @@ module TestsHelpers
     end
   end
 
-  class FakeSlowLogger
-    def initialize(lag = 1)
-      @lag = lag
-    end
-
-    def method_missing(name, *args)
-      sleep @lag
-      return true
-    end
-  end
 
   def start_ws_server(opts = {})
-    @server = Komoku::Server::WebsocketServer.start
-    if opts[:lag]
-      Komoku::Server::WebsocketServer.logger = FakeSlowLogger.new opts[:lag]
-    else
-      Komoku::Server::WebsocketServer.logger = Logger.new nil
-    end
+    # Do not like it, But it seems most ruby servers doesn't like to live and die within another ruby process
+    args = " --lag #{opts[:lag].to_f}" if opts[:lag]
+    @ws_server_pid = Process.spawn("ruby spec/helpers/test_server.rb#{args}")
+    #Komoku::Server::WebsocketServer.logger
     sleep 1 # TODO use some hook on server started to avoid sleep
   end
 
   def stop_ws_server
-    Komoku::Server::WebsocketServer.stop
-    # faye websocket stacrts eventmachine, unfortunately we have to stop it manually
-    EventMachine.stop rescue nil # can raise when EM is not started because server was started but there was no request
-    sleep 0.5 # FIXME no sleep at work
+    Process.kill 9, @ws_server_pid
+    Process.waitpid @ws_server_pid
   end
 
   def run_websocket_server(opts={})

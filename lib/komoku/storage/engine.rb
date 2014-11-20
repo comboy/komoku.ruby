@@ -1,2 +1,2 @@
-require 'komoku/storage/engine/memory'
-require 'komoku/storage/engine/database'
+require_relative 'engine/memory'
+require_relative 'engine/database'
