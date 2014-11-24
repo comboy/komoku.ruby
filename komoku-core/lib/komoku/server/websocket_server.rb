@@ -64,8 +64,8 @@ module Komoku
             end
 
             ws.onmessage = lambda do |event|
-              logger.info "=> #{event.data}"
 
+              logger.info "<= #{event.data}"
               begin
                 json = JSON.load event.data
               rescue
