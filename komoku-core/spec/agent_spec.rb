@@ -44,6 +44,15 @@ describe Komoku::Agent do
       agent.put(:foo, 456).should == true
       agent.get(:foo).should == 456
     end
+
+    it "should list stored keys" do
+      agent = Komoku::Agent.new server: ws_url, async: false
+      agent.connect
+      agent.keys.should == {}
+      agent.put(:foo, 1)
+      agent.put(:bar, 2)
+      agent.keys.keys.sort.should == %w{bar foo}
+    end
   end
 
   context "scopes" do

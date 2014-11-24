@@ -26,11 +26,12 @@ describe Komoku::Storage do
     end
 
     it 'lists keys' do
-      @storage.keys.should == []
+      @storage.keys.should == {}
       @storage.put :foo, 1
-      @storage.keys.should == %w{foo}
+      @storage.keys.keys.should == %w{foo}
+      @storage.keys['foo'][:type].should == 'numeric'
       @storage.put :bar, 2
-      @storage.keys.should == %w{bar foo}
+      @storage.keys.keys.sort.should == %w{bar foo}
     end
 
     it 'can fetch data' do

@@ -44,8 +44,10 @@ module Komoku
           ret && [ret[:time], ret[:value_avg]]
         end
 
+        # Return list of all stored keys
         def keys
-          @db[:keys].map{|k| k[:name]}
+          # TODO keys are strings, type is symbol, inconsistent
+          Hash[* @db[:keys].map{|k| [k[:name], {type: k[:key_type]}]}.flatten]
         end
 
         def stats
@@ -73,7 +75,7 @@ module Komoku
             key[:id]
           else
             # We need to create a new key, insert returns the id
-            @db[:keys].insert(name: name)
+            @db[:keys].insert(name: name, key_type: 'numeric')
           end
         end
 

@@ -47,9 +47,9 @@ module Komoku
     end
 
     # List all stored keys
-    # TODO perhaps we would like to also get info about type & number of stored values?
+    # TODO we probably would normally only want those used within some latest timespan?
     def keys
-      @engine.keys.sort
+      @engine.keys
     end
 
     def stats

@@ -40,6 +40,9 @@ module Komoku
           @storage.put data['put']['key'], data['put']['value']
           send 'ack'
 
+        when 'keys'
+          send @storage.keys
+
         # => {sub: {event: 'foo'}}
         # <= 'ack'
         when 'sub'

@@ -115,6 +115,14 @@ module Komoku
       @subscriptions[scoped_name(key)] << block
     end
 
+    def keys
+      @conn_lock.synchronize do
+        @ws.send({keys: {}}.to_json)
+        # TODO check if not error
+        @messages.pop
+      end
+    end
+
     # THINK assuming scope also applies to events, this may need some second thought
     #def subscribe(event)
       #@conn_lock.synchronize do
