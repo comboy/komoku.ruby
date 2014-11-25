@@ -44,7 +44,7 @@ module Komoku
           send @storage.keys
 
         when 'fetch'
-          send @storage.fetch data['fetch']['key'], data['fetch']['opts']
+          send @storage.fetch data['fetch']['key'], symbolize_keys(data['fetch']['opts'])
 
         # => {sub: {event: 'foo'}}
         # <= 'ack'
@@ -70,6 +70,17 @@ module Komoku
       end
 
       def close
+      end
+
+      protected
+
+      def symbolize_keys(hash)
+        hash.inject({}){|result, (key, value)|
+          new_key = key.kind_of?(String) ? key.to_sym : key
+          new_value = value.kind_of?(Hash) ? symoblize_keys(value) : value
+          result[new_key] = new_value
+          result
+        }
       end
     end # Handler
 

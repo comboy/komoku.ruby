@@ -20,10 +20,14 @@ module Komoku
           scope = @db[:numeric_data_points].where(key_id: key_id(key))
           scope = scope.where('time > :since', since: opts[:since]) if opts[:since]
           # TODO use date_trunc for pg or do some reasonable indexes
-          scope = scope.select_group(Sequel.lit "strftime('%s',time)/60").select_append { avg(value_avg).as(value_avg) } if opts[:resolution]
-          rows = scope.limit(100) # TODO limit option
+          if opts[:resolution]
+            f_time = "(strftime('%s',time)/60)"
+            scope = scope.select(Sequel.lit "#{f_time} AS time").group(Sequel.lit f_time).select_append { avg(value_avg).as(value_avg) } 
+          end
+          scope = scope.order(Sequel.desc(:time)).limit(100) # TODO limit option and order, these are defaults for testing
+          #puts "SQL: #{scope.sql}"
           rows = scope.all
-          rows.map {|r| [r[:time], r[:value_avg]]}
+          rows.reverse.map {|r| [r[:time], r[:value_avg]]}
         end
 
         def put(key, value, time)

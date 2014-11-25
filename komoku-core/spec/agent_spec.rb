@@ -113,7 +113,7 @@ describe Komoku::Agent do
       notified = false
       agent1.on_change(:moo) { notified = true }
       agent2.put :moo, 1
-      sleep 0.1 # give it some time to receive notification
+      sleep 1 # give it some time to receive notification
       notified.should == true
     end
   end

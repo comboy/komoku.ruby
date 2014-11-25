@@ -1,12 +1,15 @@
 require 'eventmachine'
 require 'faye/websocket'
 require 'json'
+require 'logger'
 
 module Komoku
 
   # TODO adding abstraction layer for different kind of connection types will change it quite a bit (API stays)
   # should probably also handle accessing storage directly (running it)
   class Agent
+
+    attr_writer :logger
 
     # Options:
     # * server - server url e.g. ws://127.0.0.1:1234/
@@ -46,6 +49,7 @@ module Komoku
       @connection_thread = Thread.new do
         begin
           EM.run do
+            logger.debug "initializing connection"
             init_connection
           end # EM
         rescue
@@ -57,8 +61,9 @@ module Komoku
         loop do
           (sleep(0.1) && next) unless connected?
           msg = @push_queue.pop
+          logger.debug "qsize = #{@push_queue.size} attempting to push msg from queue #{msg}"
           @conn_lock.synchronize do
-            @ws.send msg.to_json
+            send msg
             @messages.pop == 'ack' # error handling
             # handle timeout and exceptions
             # FIXME without rescue loop will DIE
@@ -90,19 +95,24 @@ module Komoku
     def put(key, value, time = Time.now)
       msg = {put: {key: scoped_name(key), value: value, time: time}}
       if async?
+        logger.info "async put #{key} = #{value}"
         @push_queue.push msg
         true
       else
+        logger.info "sync put #{key} = #{value}"
         @conn_lock.synchronize do
-          @ws.send msg.to_json
+          logger.debug "  got lock for #{key} = #{value}"
+          send msg
           @messages.pop == 'ack' # TODO error handling
         end
       end
     end
 
     def get(key)
+      logger.info "get :#{key}"
       @conn_lock.synchronize do
-        @ws.send({get: {key: scoped_name(key)}}.to_json)
+        logger.debug "  lock aquired"
+        send({get: {key: scoped_name(key)}})
         # TODO check if not error
         # TODO we may need to convert it to proper value type I guess?
         @messages.pop
@@ -110,14 +120,14 @@ module Komoku
     end
 
     def on_change(key, &block)
-      @ws.send({sub: {key: scoped_name(key)}}.to_json)
+      send({sub: {key: scoped_name(key)}})
       @subscriptions[scoped_name(key)] ||= []
       @subscriptions[scoped_name(key)] << block
     end
 
     def keys
       @conn_lock.synchronize do
-        @ws.send({keys: {}}.to_json)
+        send({keys: {}})
         # TODO check if not error
         @messages.pop
       end
@@ -125,7 +135,7 @@ module Komoku
 
     def fetch(key, opts={})
       @conn_lock.synchronize do
-        @ws.send({fetch: {key: key, opts: opts}}.to_json)
+        send({fetch: {key: key, opts: opts}})
         # TODO check if not error
         @messages.pop
       end
@@ -143,6 +153,16 @@ module Komoku
       #@ws.send({pub: {event: scoped_name(event), data: data}}.to_json)
     #end
 
+    def logger
+      @logger ||= Logger.new nil
+    end
+
+    def send(msg)
+      raise "no connection" unless connected?
+      logger.debug "<= #{msg}"
+      @ws.send msg.to_json
+    end
+
     protected
 
     def init_connection
@@ -154,9 +174,11 @@ module Komoku
 
       @ws.on :close do |event|
         @connected = false
+        logger.info "disconnected from server"
         @ws_events.push :disconnected
         if @opts[:reconnect] && @should_be_connected
           sleep 0.1
+          logger.debug "attempting to reconnect"
           init_connection
         end
       end
@@ -164,6 +186,7 @@ module Komoku
       @ws.on :message do |event|
         data = JSON.load(event.data)
         @ws_events.push [:message, event]
+        logger.debug "=> #{data}"
         if data.kind_of?(Hash) && data['pub'] # it's some event, handle separately
           dp = data['pub']
           if dp['key']
