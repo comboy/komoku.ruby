@@ -45,6 +45,19 @@ describe Komoku::Agent do
       agent.get(:foo).should == 456
     end
 
+  end
+
+  context "fetch data" do
+    run_websocket_server
+
+    it "should be able to fetch last values" do
+      agent = Komoku::Agent.new server: ws_url, async: false
+      agent.connect
+      agent.fetch(:foo).should == []
+      agent.put(:foo, 6); agent.put(:foo, 9)
+      agent.fetch(:foo).map(&:last).should == [6,9]
+    end
+
     it "should list stored keys" do
       agent = Komoku::Agent.new server: ws_url, async: false
       agent.connect
@@ -53,6 +66,7 @@ describe Komoku::Agent do
       agent.put(:bar, 2)
       agent.keys.keys.sort.should == %w{bar foo}
     end
+
   end
 
   context "scopes" do

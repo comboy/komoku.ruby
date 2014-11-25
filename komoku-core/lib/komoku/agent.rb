@@ -123,6 +123,14 @@ module Komoku
       end
     end
 
+    def fetch(key, opts={})
+      @conn_lock.synchronize do
+        @ws.send({fetch: {key: key, opts: opts}}.to_json)
+        # TODO check if not error
+        @messages.pop
+      end
+    end
+
     # THINK assuming scope also applies to events, this may need some second thought
     #def subscribe(event)
       #@conn_lock.synchronize do

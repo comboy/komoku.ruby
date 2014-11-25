@@ -43,6 +43,9 @@ module Komoku
         when 'keys'
           send @storage.keys
 
+        when 'fetch'
+          send @storage.fetch data['fetch']['key'], data['fetch']['opts']
+
         # => {sub: {event: 'foo'}}
         # <= 'ack'
         when 'sub'

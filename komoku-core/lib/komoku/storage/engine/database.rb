@@ -21,6 +21,7 @@ module Komoku
           scope = scope.where('time > :since', since: opts[:since]) if opts[:since]
           # TODO use date_trunc for pg or do some reasonable indexes
           scope = scope.select_group(Sequel.lit "strftime('%s',time)/60").select_append { avg(value_avg).as(value_avg) } if opts[:resolution]
+          rows = scope.limit(100) # TODO limit option
           rows = scope.all
           rows.map {|r| [r[:time], r[:value_avg]]}
         end
