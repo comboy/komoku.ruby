@@ -9,12 +9,15 @@ module Komoku
   # should probably also handle accessing storage directly (running it)
   class Agent
 
+    DEFAULT_TIMEOUT = 10
+
     attr_writer :logger
 
     # Options:
     # * server - server url e.g. ws://127.0.0.1:1234/
     # * scope - prepend all keys names with given "#{scope}__"
     # * async[true] - if false, #put is synchronus and waiting for ack
+    # * timeout - assume failure if server doesnt respond after this amount of seconds
     def initialize(opts = {})
       # TODO U4 validate if server url is valid
       @server = opts[:server]
@@ -62,11 +65,22 @@ module Komoku
           (sleep(0.1) && next) unless connected?
           msg = @push_queue.pop
           logger.debug "qsize = #{@push_queue.size} attempting to push msg from queue #{msg}"
-          @conn_lock.synchronize do
-            send msg
-            @messages.pop == 'ack' # error handling
-            # handle timeout and exceptions
-            # FIXME without rescue loop will DIE
+          begin
+            @conn_lock.synchronize do
+              timeout do
+                send msg
+                @messages.pop == 'ack' # error handling
+              end
+            end
+          rescue
+            logger.error "[#{$!}] failed to send #{msg}"
+            # FIXME this is messy and needs thinking, cases:
+            # * server drops connection, we reconnect and want to push again
+            # * server didnt drop connection, it just took > timeout to respond - terrible, we receive ack out of nowhere, perhaps we want to reconnect here?
+            @push_queue.push msg # should actually still be at the beginnig of the queue
+            # so just in case..
+            disconnect
+            connect
           end
         end
       end
@@ -164,6 +178,12 @@ module Komoku
     end
 
     protected
+
+    def timeout
+      Timeout::timeout(@opts[:timeout] || DEFAULT_TIMEOUT) do
+        yield
+      end
+    end
 
     def init_connection
       @ws = Faye::WebSocket::Client.new(@server)

@@ -168,6 +168,19 @@ describe Komoku::Agent do
       stop_ws_server
     end
 
+    it "can handle server taking to respond more than timeout" do
+      start_ws_server lag: 1
+      agent = Komoku::Agent.new server: ws_url, timeout: 0.5, async: true, reconnect: true
+      agent.connect
+      agent.put :foo, 31337
+      sleep 1.5
+      stop_ws_server
+      start_ws_server # now responding prorperly
+      sleep 0.2
+      agent.get(:foo).should == 31337
+      stop_ws_server
+    end
+
   end
 
 end
