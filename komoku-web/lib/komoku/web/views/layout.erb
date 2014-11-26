@@ -16,7 +16,9 @@
 
     <!-- Custom styles for this template -->
     <link href="css/dashboard.css" rel="stylesheet">
+    <link href="css/komoku.css" rel="stylesheet">
     <script src="js/angular.min.js"></script>
+    <script src="js/dygraph-combined.js"></script>
     <script src="js/komoku.js"></script>
   </head>
 
@@ -63,18 +65,18 @@
 
           <div class="row placeholders">
             <div class="col-xs-6 col-sm-3 placeholder">
-              <img data-src="holder.js/200x200/auto/sky" class="img-responsive" alt="Generic placeholder thumbnail">
-              <h4>Label</h4>
+              <div class="img-responsive dygraph" id="dygraph_last_hour"></div>
+              <h4>Last hour</h4>
               <span class="text-muted">Something else</span>
             </div>
             <div class="col-xs-6 col-sm-3 placeholder">
-              <img data-src="holder.js/200x200/auto/vine" class="img-responsive" alt="Generic placeholder thumbnail">
-              <h4>Label</h4>
+              <div class="img-responsive dygraph" id="dygraph_last_24h"></div>
+              <h4>Last 24h</h4>
               <span class="text-muted">Something else</span>
             </div>
             <div class="col-xs-6 col-sm-3 placeholder">
-              <img data-src="holder.js/200x200/auto/sky" class="img-responsive" alt="Generic placeholder thumbnail">
-              <h4>Label</h4>
+              <div class="img-responsive dygraph" id="dygraph_last_month"></div>
+              <h4>Last month</h4>
               <span class="text-muted">Something else</span>
             </div>
             <div class="col-xs-6 col-sm-3 placeholder">

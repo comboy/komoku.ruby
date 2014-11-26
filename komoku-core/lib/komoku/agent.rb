@@ -173,8 +173,8 @@ module Komoku
       end
 
       @ws.on :close do |event|
+        logger.info "disconnected from server" if connected?
         @connected = false
-        logger.info "disconnected from server"
         @ws_events.push :disconnected
         if @opts[:reconnect] && @should_be_connected
           sleep 0.1
