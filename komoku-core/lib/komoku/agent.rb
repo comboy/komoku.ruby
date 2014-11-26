@@ -79,13 +79,12 @@ module Komoku
             # * server didnt drop connection, it just took > timeout to respond - terrible, we receive ack out of nowhere, perhaps we want to reconnect here?
             @push_queue.push msg # should actually still be at the beginnig of the queue
             # so just in case..
-            disconnect
-            connect
+            handle_error('reconnect after failed push') { disconnect; connect }
           end
         end
       end
 
-      state = @ws_events.pop
+      state = timeout { @ws_events.pop }
       raise "some connection error" unless state == :connected # TODO some nicer exception + more info 
       @should_be_connected = true
       return true
@@ -178,6 +177,14 @@ module Komoku
     end
 
     protected
+
+    def handle_error(msg='')
+      begin
+        yield
+      rescue
+        logger.error "ERR [#{$!.to_s}] #{msg}"
+      end
+    end
 
     def timeout
       Timeout::timeout(@opts[:timeout] || DEFAULT_TIMEOUT) do
