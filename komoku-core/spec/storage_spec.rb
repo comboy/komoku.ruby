@@ -60,12 +60,13 @@ describe Komoku::Storage do
 
     it 'aggregates values' do
       t = Time.now
+      t = t - t.to_i % 60 # we align to minutes so this is to make test always give the same results
       @storage.put :foo, 1, t - 3*60
-      @storage.put :foo, 0.5, t - 2*60 
-      @storage.put :foo, 1.5, t - 2.1*60
+      @storage.put :foo, 0.5, t - 2*60
+      @storage.put :foo, 1.5, t - 1.9*60
       @storage.put :foo, 3, t - 1*60
 
-      data = @storage.fetch :foo, resolution: '1m'
+      data = @storage.fetch :foo, step: '1M'
 
       data.map(&:last).should == [1,1,3]
     end
@@ -78,6 +79,32 @@ describe Komoku::Storage do
       stats = @storage.stats
       stats[:keys_count].should == 2
       stats[:data_points_count].should == 3
+    end
+  end
+
+  context 'fetch' do
+    before do
+      @storage = Komoku::Storage.new engine: Komoku::Storage::Engine::Database.new(db: Sequel.sqlite)
+    end
+
+    it "handles 1M resolution" do
+      t0 = Time.new 2014, 1, 1
+      @storage.put :foo, 1, t0
+      @storage.put :foo, 2, t0 + 30
+      @storage.put :foo, 3, t0 + 70
+      @storage.put :foo, 4, t0 + 100
+      @storage.fetch(:foo, step: '1M').should == [[t0, 1.5], [t0+60, 3.5]]
+    end
+
+    context "steps" do
+      before do
+        @base = Komoku::Storage::Engine::Base.new
+      end
+
+      it { @base.send(:step, '1M').should == {unit: 'minute', count: 1, span: 60} }
+      it { @base.send(:step, '5M').should == {unit: 'minute', count: 5, span: 300} }
+      it { @base.send(:step, '2H').should == {unit: 'hour', count: 2, span: 3600*2} }
+      it { @base.send(:step, '1m').should include({unit: 'month', count: 1} ) }
     end
   end
 

@@ -1,6 +1,7 @@
 require 'sequel'
 require 'sqlite3'
 require 'logger'
+require 'time'
 
 module Komoku
   class Storage
@@ -19,15 +20,21 @@ module Komoku
         def fetch(key, opts = {})
           scope = @db[:numeric_data_points].where(key_id: key_id(key))
           scope = scope.where('time > :since', since: opts[:since]) if opts[:since]
-          # TODO use date_trunc for pg or do some reasonable indexes
-          if opts[:resolution]
-            f_time = "(strftime('%s',time)/60)"
-            scope = scope.select(Sequel.lit "#{f_time} AS time").group(Sequel.lit f_time).select_append { avg(value_avg).as(value_avg) } 
+          # TODO use date_trunc for pg (main use case)
+          if opts[:step]
+            s = step opts[:step] # see Engine::Base#step
+            f_time = "(strftime('%s',time)/#{s[:span]})*#{s[:span]}"
+            scope = scope.select(Sequel.lit "datetime(#{f_time}, 'unixepoch') AS time").group(Sequel.lit f_time).select_append { avg(value_avg).as(value_avg) }
           end
           scope = scope.order(Sequel.desc(:time)).limit(100) # TODO limit option and order, these are defaults for testing
           #puts "SQL: #{scope.sql}"
           rows = scope.all
-          rows.reverse.map {|r| [r[:time], r[:value_avg]]}
+          rows.reverse.map do |r|
+            # for reasons unknown to me sequel returns string instead of time object for sqlite with our custom  select
+            time = r[:time].kind_of?(String) ? Time.parse(r[:time]) : r[:time]
+            value = r[:value_avg]
+            [time, value]
+          end
         end
 
         def put(key, value, time)

@@ -52,7 +52,7 @@ module Komoku
         app = lambda do |env|
           if Faye::WebSocket.websocket?(env)
             # TODO research ping - when positive it was slowing down some tests by what ping was set to
-            ws = Faye::WebSocket.new(env, ['irc', 'xmpp'], :ping => 0)
+            ws = Faye::WebSocket.new(env, ['irc', 'xmpp'], :ping => 2)
             handler = nil
             logger.info [:open, ws.url, ws.version, ws.protocol].pretty_inspect
             #handler = SocketHandler.new ws, env
