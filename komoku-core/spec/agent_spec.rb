@@ -45,6 +45,13 @@ describe Komoku::Agent do
       agent.get(:foo).should == 456
     end
 
+    it "can handle boolean values" do
+      agent = Komoku::Agent.new server: ws_url, async: false
+      agent.connect
+      agent.put(:foo, false)
+      agent.get(:foo).should == false
+    end
+
   end
 
   context "fetch data" do
@@ -176,7 +183,7 @@ describe Komoku::Agent do
       sleep 1.5
       stop_ws_server
       start_ws_server # now responding prorperly
-      sleep 0.2
+      sleep 0.5 # give it some time to reconnect
       agent.get(:foo).should == 31337
       stop_ws_server
     end

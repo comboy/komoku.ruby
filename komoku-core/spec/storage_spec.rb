@@ -82,6 +82,20 @@ describe Komoku::Storage do
     end
   end
 
+  context 'type handling' do
+    before do
+      @storage = Komoku::Storage.new engine: Komoku::Storage::Engine::Database.new(db: Sequel.sqlite)
+    end
+
+    it 'handles booleans' do
+      @storage.put :foo, true
+      @storage.get(:foo).should == true
+      @storage.put :bar, false
+      @storage.get(:bar).should == false
+    end
+
+  end
+
   context 'fetch' do
     before do
       @storage = Komoku::Storage.new engine: Komoku::Storage::Engine::Database.new(db: Sequel.sqlite)

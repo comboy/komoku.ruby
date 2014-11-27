@@ -39,6 +39,15 @@ module Komoku
 
         protected
 
+        def guess_key_type(value)
+          # TODO other types, probably also guess bool for [on,off] [yes,no]?
+          if [true, false].include? value
+            'boolean'
+          else
+            'numeric'
+          end
+        end
+
         def step(name)
           units = {
             'S' => 'second',

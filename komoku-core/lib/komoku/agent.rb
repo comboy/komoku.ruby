@@ -15,7 +15,7 @@ module Komoku
 
     # Options:
     # * server - server url e.g. ws://127.0.0.1:1234/
-    # * scope - prepend all keys names with given "#{scope}__"
+    # * scope - prepend all keys names with given "#{scope}."
     # * async[true] - if false, #put is synchronus and waiting for ack
     # * timeout - assume failure if server doesnt respond after this amount of seconds
     def initialize(opts = {})
@@ -79,7 +79,8 @@ module Komoku
             # * server didnt drop connection, it just took > timeout to respond - terrible, we receive ack out of nowhere, perhaps we want to reconnect here?
             @push_queue.push msg # should actually still be at the beginnig of the queue
             # so just in case..
-            handle_error('reconnect after failed push') { disconnect; connect }
+            # TODO instead of reconnecting just in case, we will check if @messages are empty after acquiring lock
+            # handle_error('reconnect after failed push') { disconnect; connect }
           end
         end
       end
@@ -139,6 +140,8 @@ module Komoku
     end
 
     def keys
+      # TODO abstract away conn_lock synchronize and add check if messages are empty, 
+      # also messages should probably be called replies
       @conn_lock.synchronize do
         send({keys: {}})
         # TODO check if not error
@@ -233,7 +236,7 @@ module Komoku
 
     # prepend key name with scope if there is some scope set
     def scoped_name(name)
-      @scope ? "#{@scope}__#{name}" : name.to_s
+      @scope ? "#{@scope}#{Komoku::Core::SCOPE_SEPARATOR}#{name}" : name.to_s
     end
   end
 end

@@ -17,8 +17,9 @@ module Komoku
           super
         end
 
-        def fetch(key, opts = {})
-          scope = @db[:numeric_data_points].where(key_id: key_id(key))
+        def fetch(name, opts = {})
+          key = get_key(name)
+          scope = @db[:numeric_data_points].where(key_id: key[:id])
           scope = scope.where('time > :since', since: opts[:since]) if opts[:since]
           # TODO use date_trunc for pg (main use case)
           if opts[:step]
@@ -37,23 +38,37 @@ module Komoku
           end
         end
 
-        def put(key, value, time)
+        def put(name, value, time)
           # read previous values if we need them for notification
-          last_time, last_value = last(key) if @change_notifications[key]
+          last_time, last_value = last(name) if @change_notifications[name]
 
           # FIXME TODO steps definitions
           default_step = 5 # seconds
+          key_type = guess_key_type(value)
+          key = get_key(name, key_type)
 
-          @db[:numeric_data_points].insert(key_id: key_id(key), value_avg: value, time: time, value_count: 1, value_max: value, value_min: value) #TODO fill in other fields
+          case key_type
+          when 'boolean'
+            @db[:boolean_data_points].insert(key_id: key[:id], value: value, time: time)
+          else
+            @db[:numeric_data_points].insert(key_id: key[:id], value_avg: value, time: time, value_count: 1, value_max: value, value_min: value)
+          end
 
           # notify about the change
-          notify_change key, last_value, value if @change_notifications[key] && ( last_time.nil? || (time > last_time) && (last_value != value) )
+          notify_change name, last_value, value if @change_notifications[name] && ( last_time.nil? || (time > last_time) && (last_value != value) )
         end
 
-        def last(key)
+        def last(name)
           # OPTIMIZE caching
-          ret = @db[:numeric_data_points].where(key_id: key_id(key)).order(Sequel.desc(:id)).first
-          ret && [ret[:time], ret[:value_avg]]
+          # FIXME it creates key with given name if it doesn't exists yet, very wrong, should just return nil
+          key = get_key(name)
+          if key[:type] == 'boolean'
+            ret = @db[:boolean_data_points].where(key_id: key[:id]).order(Sequel.desc(:time)).first
+            ret && [ret[:time], ret[:value]]
+          else
+            ret = @db[:numeric_data_points].where(key_id: key[:id]).order(Sequel.desc(:time)).first
+            ret && [ret[:time], ret[:value_avg]]
+          end
         end
 
         # Return list of all stored keys
@@ -81,13 +96,15 @@ module Komoku
 
         protected
 
-        def key_id(name)
+        def get_key(name, key_type='numeric')
+          # OPTIMIZE caching, key type and id won't ever change
           key = @db[:keys].first(name: name.to_s)
           if key
-            key[:id]
+            {id: key[:id], type: key[:key_type]}
           else
             # We need to create a new key, insert returns the id
-            @db[:keys].insert(name: name, key_type: 'numeric')
+            id = @db[:keys].insert(name: name, key_type: key_type)
+            {id: id, type: key_type}
           end
         end
 
@@ -117,13 +134,22 @@ module Komoku
 
           @db.create_table?(:numeric_data_points) do
             primary_key :id
-            column :key_id, :integer
+            column :key_id, :integer, index: true
             column :time, :timestamp, index: true
             column :value_avg, :double
             column :value_count, :integer
             column :value_max, :double
             column :value_min, :double
             column :value_step, :integer
+          end
+
+          # TODO THINK should we allow nil for boolean values?
+          @db.create_table?(:boolean_data_points) do
+            primary_key :id
+            column :key_id, :integer, index: true
+            column :time, :timestamp, index: true
+            column :value, :boolean
+            # TODO aggregation possible within the same table?
           end
 
         end
