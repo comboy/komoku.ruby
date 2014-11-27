@@ -66,7 +66,7 @@ module Komoku
           msg = @push_queue.pop
           logger.debug "qsize = #{@push_queue.size} attempting to push msg from queue #{msg}"
           begin
-            @conn_lock.synchronize do
+            conversation do
               timeout do
                 send msg
                 @messages.pop == 'ack' # error handling
@@ -114,7 +114,7 @@ module Komoku
         true
       else
         logger.info "sync put #{key} = #{value}"
-        @conn_lock.synchronize do
+        conversation do
           logger.debug "  got lock for #{key} = #{value}"
           send msg
           @messages.pop == 'ack' # TODO error handling
@@ -124,7 +124,7 @@ module Komoku
 
     def get(key)
       logger.info "get :#{key}"
-      @conn_lock.synchronize do
+      conversation do
         logger.debug "  lock aquired"
         send({get: {key: scoped_name(key)}})
         # TODO check if not error
@@ -134,7 +134,7 @@ module Komoku
     end
 
     def on_change(key, &block)
-      @conn_lock.synchronize do
+      conversation do
         send({sub: {key: scoped_name(key)}})
         @messages.pop
       end
@@ -143,9 +143,7 @@ module Komoku
     end
 
     def keys
-      # TODO abstract away conn_lock synchronize and add check if messages are empty, 
-      # also messages should probably be called replies
-      @conn_lock.synchronize do
+      conversation do
         send({keys: {}})
         # TODO check if not error
         @messages.pop
@@ -153,7 +151,7 @@ module Komoku
     end
 
     def fetch(key, opts={})
-      @conn_lock.synchronize do
+      conversation do
         send({fetch: {key: key, opts: opts}})
         # TODO check if not error
         @messages.pop
@@ -162,7 +160,7 @@ module Komoku
 
     # THINK assuming scope also applies to events, this may need some second thought
     #def subscribe(event)
-      #@conn_lock.synchronize do
+      #conversation do
         #@ws.send({sub: {event: scoped_name(event)}}.to_json)
         #@messages.pop == 'ack' # TODO error handling
       #end
@@ -183,6 +181,15 @@ module Komoku
     end
 
     protected
+
+    # Acquires connection lock so that we don't get response from some different query accidentaly
+    # in case many thread are used
+    def conversation
+      @conn_lock.synchronize do
+        raise "messages are not empty, that's bad [#{@messages.pop}]" unless @messages.size == 0
+        yield
+      end
+    end
 
     def handle_error(msg='')
       begin
