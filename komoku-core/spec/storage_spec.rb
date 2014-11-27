@@ -94,6 +94,12 @@ describe Komoku::Storage do
       @storage.get(:bar).should == false
     end
 
+    it 'doesnt decide key type on empty read' do
+      @storage.get :foo
+      @storage.put :foo, true
+      @storage.get(:foo).should == true
+    end
+
   end
 
   context 'fetch' do

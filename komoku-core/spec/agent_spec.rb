@@ -123,6 +123,21 @@ describe Komoku::Agent do
       sleep 1 # give it some time to receive notification
       notified.should == true
     end
+
+
+    it "handles exceptions in on change blocks" do
+      agent = Komoku::Agent.new server: ws_url, async: false
+      agent.connect
+      notified = false
+      agent.on_change(:foo) do
+        notified = true
+        raise "boom"
+      end
+      agent.put :foo, 123
+      sleep 0.2 # some time to receive notification
+      notified.should == true
+      agent.get(:foo).should == 123
+    end
   end
 
   context "async" do

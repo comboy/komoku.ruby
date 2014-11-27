@@ -18,7 +18,7 @@ module Komoku
         end
 
         def fetch(name, opts = {})
-          key = get_key(name)
+          return [] unless key = get_key(name)
           scope = @db[:numeric_data_points].where(key_id: key[:id])
           scope = scope.where('time > :since', since: opts[:since]) if opts[:since]
           # TODO use date_trunc for pg (main use case)
@@ -60,8 +60,7 @@ module Komoku
 
         def last(name)
           # OPTIMIZE caching
-          # FIXME it creates key with given name if it doesn't exists yet, very wrong, should just return nil
-          key = get_key(name)
+          return nil unless key = get_key(name)
           if key[:type] == 'boolean'
             ret = @db[:boolean_data_points].where(key_id: key[:id]).order(Sequel.desc(:time)).first
             ret && [ret[:time], ret[:value]]
@@ -96,12 +95,14 @@ module Komoku
 
         protected
 
-        def get_key(name, key_type='numeric')
+        # if key_type is provided, it will create key with given name if it doesn't exist yet
+        def get_key(name, key_type=nil)
           # OPTIMIZE caching, key type and id won't ever change
           key = @db[:keys].first(name: name.to_s)
           if key
             {id: key[:id], type: key[:key_type]}
           else
+            return nil unless key_type
             # We need to create a new key, insert returns the id
             id = @db[:keys].insert(name: name, key_type: key_type)
             {id: id, type: key_type}

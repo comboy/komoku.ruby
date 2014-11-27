@@ -134,7 +134,10 @@ module Komoku
     end
 
     def on_change(key, &block)
-      send({sub: {key: scoped_name(key)}})
+      @conn_lock.synchronize do
+        send({sub: {key: scoped_name(key)}})
+        @messages.pop
+      end
       @subscriptions[scoped_name(key)] ||= []
       @subscriptions[scoped_name(key)] << block
     end
@@ -225,7 +228,9 @@ module Komoku
               # TODO THINK should we 'unscope' this key if scope is used?
               # but then what about subs outside agent scope? should  they be possible?
               # perhaps scope should be some interface... agent.scope('foo')
-              blk.call(dp['key'], dp['prev'], dp['curr'])
+              handle_error("on change key=#{dp['key']}") do
+                blk.call(dp['key'], dp['prev'], dp['curr'])
+              end
             end
           end
         else # non-event message

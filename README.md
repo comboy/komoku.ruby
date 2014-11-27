@@ -23,13 +23,13 @@ So I currently decided to go with 3 data types:
 
 ### Numeric
 
-Double. I'm considering using actual numeric type (specified precition, exact). Currently there's only gauge but I plan adding different types similar to what's known from rrdtool. Should be able to use different aggregations (for now, most of my cases are covered with gauge avg/min/max so I'm focusing on that)
+Double. I'm considering using actual numeric type (specified precision, exact). Currently there's only gauge but I plan adding different types similar to what's known from rrdtool. It should be able to use different aggregations (for now, most of my cases are covered with gauge avg/min/max so I'm focusing on that)
 
 HA: tracking temp, humidity light etc.
 
 ### Boolean
 
-True and false. But. It represents the state change that lasts. So with boolean you should be able to get stats like:
+True and false. But. It represents the state changes that last. So with boolean you should be able to get stats like:
 
 * what value was present at given time
 * uptime-like stats e.g. 99.5% true during last month
@@ -42,9 +42,9 @@ HA: state of the light somewhere, is door open, is window open
 
 ### String
 
-Custom string. A bit to much describe my use case. But basically you can assign any custom string.
+Custom string. A bit too much to describe my use case, but basically you can assign any custom string.
 
-* so you can disable compacting and just use it as a log (better yet let's compact keeping in mind that it is a logfile)
+* so you can disable compacting and just use it as a log (better yet let's compact it, keeping in mind that it is a logfile)
 * or you can be only assigning to it some set of strings representing state of something (stats then are boolean-alike but with more values)
 
 HA: log, what's the alarm state (armed, disabled, waiting), what room I'm in
