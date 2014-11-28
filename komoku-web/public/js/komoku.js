@@ -1,6 +1,10 @@
 var komokuApp = angular.module('komokuApp', []);
 
+
 komokuApp.controller('KomokuCtrl', function ($scope, $http) {
+
+  dyGraphs = {}
+  dyGraphsData = {}
 
   $scope.selectKey = function(key) {
     $scope.selectedKey = key
@@ -17,23 +21,49 @@ komokuApp.controller('KomokuCtrl', function ($scope, $http) {
               value[1]
             ])
           })
-          // TODO I guess we should be updating chart data instead of creating new object each time
-          startDate = {
-            'last_hour': new Date(new Date() - 3600*1000),
-            'last_24h': new Date(new Date() - 3600*24*1000),
-            'last_month': new Date(new Date() - 31*3600*24*1000),
-          }[key]
-          new Dygraph(document.getElementById("dygraph_"+key), ddata,
-          {
-            dateWindow: [startDate, new Date()],
-            labels: ['Time', $scope.selectedKey]
-          });
+          dyGraphsData[key] = ddata
+          dyGraphs[key].updateOptions({'file': ddata})
         } else {} // TODO display no data msg
       })
     });
   }
 
+  // Fetch keys list
   $http.get('keys.json').success(function(data) {
     $scope.keys = data;
   });
+
+  // Subscribe to key changes
+  source = new EventSource('/subscribe');
+  source.addEventListener('message', function (event) {
+    data = JSON.parse(event.data)
+    console.log(data)
+    $scope.keys[data.key].value = data.value
+    if ($scope.selectedKey == data.key) {
+      $scope.lastPoints.push([new Date(), data.value])
+      angular.forEach(dyGraphsData, function(points, key) {
+        points.push([new Date(), data.value])
+        dyGraphs[key].updateOptions({'file': points})
+      })
+      // TODO also updates charts and stuff
+    }
+    $scope.$apply()
+  }, false);
+
+  // prepare graps
+  graphsTimespans = {
+    'last_hour': new Date(new Date() - 3600*1000),
+    'last_24h': new Date(new Date() - 3600*24*1000),
+    'last_month': new Date(new Date() - 31*3600*24*1000),
+  }
+
+  angular.forEach(graphsTimespans, function(value, key) {
+    dyGraphs[key] = new Dygraph(document.getElementById("dygraph_"+key), [],
+    {
+      dateWindow: [value, new Date()],
+      labels: ['Time', 'Value']
+    });
+  })
+
+
 });

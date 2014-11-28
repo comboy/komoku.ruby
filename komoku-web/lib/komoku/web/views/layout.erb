@@ -55,7 +55,10 @@
 
           <ul class="nav nav-sidebar">
             <li ng-repeat="(key, opts) in keys" ng-click="selectKey(key)" ng-class="{active: selectedKey == key}">
-            <a href="">{{key}}</a>
+            <a href="">
+              <span class="label" ng-class="{'label-primary': opts.type == 'numeric', 'label-success': opts.type == 'boolean' && opts.value == true, 'label-danger': opts.type == 'boolean' && opts.value == false}" style="float: right">{{opts.value}}</span>
+              {{key}}
+            </a>
             </li>
           </ul>
 
@@ -96,7 +99,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr ng-repeat="point in lastPoints">
+                <tr ng-repeat="point in lastPoints.slice().reverse()">
                   <td>{{point[0]}}</td>
                   <td>{{point[1]}}</td>
                 </tr>
@@ -104,7 +107,7 @@
             </table>
           </div>
 
-          <h2 class="sub-header">Section tit {{ 2 + 2 }}</h2>
+          <h2 class="sub-header">{{ 2 + 2 }}</h2>
           <div class="table-responsive">
             <table class="table table-striped">
               <thead>
