@@ -111,7 +111,7 @@ describe Komoku::Agent do
       agent = Komoku::Agent.new server: ws_url, async: false
       agent.connect
       notified = false
-      agent.on_change(:foo) do |key, prev, curr|
+      agent.on_change(:foo) do |key, curr, prev|
         notified = true
         key.should == 'foo'
         prev.should == nil

@@ -184,7 +184,7 @@ describe Komoku::Storage do
     it "provides correct arguments in the notification" do
       @storage.put :foo, 1
       notified = false
-      @storage.on_change(:foo) do |key, prev, curr|
+      @storage.on_change(:foo) do |key, curr, prev|
         key.should == 'foo'
         prev.should == 1
         curr.should == 2

@@ -114,7 +114,7 @@ module Komoku
           @change_notifications[key].each do |block|
             # we provide key as one of the args in case some pattern matching is implmented later e.g. notify on foo__*
             # TODO rescue exceptions?
-            block.call(key, last_value, value)
+            block.call(key, value, last_value)
           end
         end
 

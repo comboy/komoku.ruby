@@ -133,6 +133,8 @@ module Komoku
       end
     end
 
+    # Subscribe to key value changes.
+    # Block will be called with 3 arguments: key, current_value, previous_value
     def on_change(key, &block)
       conversation do
         send({sub: {key: scoped_name(key)}})
@@ -142,6 +144,11 @@ module Komoku
       @subscriptions[scoped_name(key)] << block
     end
 
+    # List all keys present in storage
+    # Returns hash of keys with their types e.g. {'foo' => {type: 'numeric'}}
+    # Opts:
+    # * include - array of additional data to provide, e.g.
+    #             keys(include: [:value]) => {'foo' => {type: 'numeric', value: 42}}
     def keys(opts = {})
       conversation do
         send({keys: opts})
@@ -175,13 +182,13 @@ module Komoku
       @logger ||= Logger.new nil
     end
 
+    protected
+
     def send(msg)
       raise "no connection" unless connected?
       logger.debug "<= #{msg}"
       @ws.send msg.to_json
     end
-
-    protected
 
     # Acquires connection lock so that we don't get response from some different query accidentaly
     # in case many thread are used
@@ -237,7 +244,7 @@ module Komoku
               # but then what about subs outside agent scope? should  they be possible?
               # perhaps scope should be some interface... agent.scope('foo')
               handle_error("on change key=#{dp['key']}") do
-                blk.call(dp['key'], dp['prev'], dp['curr'])
+                blk.call(dp['key'], dp['curr'], dp['prev'])
               end
             end
           end
