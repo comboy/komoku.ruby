@@ -34,6 +34,12 @@ describe Komoku::Storage do
       @storage.keys.keys.sort.should == %w{bar foo}
     end
 
+    it 'lists keys with last value' do
+      @storage.put :foo, 5
+      @storage.put :bar, true
+      @storage.keys(include: [:value]).should == {'foo' => {type: 'numeric', value: 5}, 'bar' => {type: 'boolean', value:  true}}
+    end
+
     it 'can fetch data' do
       @storage.put :foo, 1
       @storage.put :foo, 2

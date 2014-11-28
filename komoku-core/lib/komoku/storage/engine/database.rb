@@ -71,7 +71,7 @@ module Komoku
         end
 
         # Return list of all stored keys
-        def keys
+        def keys(opts = {})
           # TODO keys are strings, type is symbol, inconsistent
           Hash[* @db[:keys].map{|k| [k[:name], {type: k[:key_type]}]}.flatten]
         end
