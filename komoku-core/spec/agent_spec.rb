@@ -74,6 +74,14 @@ describe Komoku::Agent do
       agent.keys.keys.sort.should == %w{bar foo}
     end
 
+    it "should list stored keys with values" do
+      agent = Komoku::Agent.new server: ws_url, async: false
+      agent.connect
+      agent.put(:foo, 1)
+      agent.put(:bar, false)
+      agent.keys(include: [:value]).should == {'foo' => {type: 'numeric', value: 1}, 'bar' => {type: 'boolean', value: false}}
+    end
+
   end
 
   context "scopes" do

@@ -50,7 +50,7 @@ module Komoku
     # TODO we probably would normally only want those used within some latest timespan?
     def keys(opts = {})
       keys_hash = @engine.keys(opts)
-      if opts[:include] && opts[:include].include?(:value)
+      if opts[:include] && opts[:include].map(&:to_sym).include?(:value)
         # TODO N+1, fix when we have a method to fetch multiple keys values
         keys_hash.merge!(keys_hash) do |key, data|
           data.merge value: get(key)

@@ -142,11 +142,12 @@ module Komoku
       @subscriptions[scoped_name(key)] << block
     end
 
-    def keys
+    def keys(opts = {})
       conversation do
-        send({keys: {}})
+        send({keys: opts})
         # TODO check if not error
-        @messages.pop
+        ret = @messages.pop
+        ret.merge(ret) {|k,v| symbolize_keys v}
       end
     end
 
@@ -249,6 +250,16 @@ module Komoku
     # prepend key name with scope if there is some scope set
     def scoped_name(name)
       @scope ? "#{@scope}#{Komoku::Core::SCOPE_SEPARATOR}#{name}" : name.to_s
+    end
+
+    # TODO move to some comomn helpers
+    def symbolize_keys(hash)
+      hash.inject({}){|result, (key, value)|
+        new_key = key.kind_of?(String) ? key.to_sym : key
+        new_value = value.kind_of?(Hash) ? symoblize_keys(value) : value
+        result[new_key] = new_value
+        result
+      }
     end
   end
 end

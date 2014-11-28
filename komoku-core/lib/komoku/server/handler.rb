@@ -41,7 +41,7 @@ module Komoku
           send 'ack'
 
         when 'keys'
-          send @storage.keys
+          send @storage.keys(symbolize_keys(data['keys']))
 
         when 'fetch'
           send @storage.fetch data['fetch']['key'], symbolize_keys(data['fetch']['opts'])
@@ -74,6 +74,7 @@ module Komoku
 
       protected
 
+      # TODO move to some comomn helpers
       def symbolize_keys(hash)
         hash.inject({}){|result, (key, value)|
           new_key = key.kind_of?(String) ? key.to_sym : key
