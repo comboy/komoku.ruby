@@ -78,7 +78,8 @@ module Komoku
 
         def stats
           {
-            data_points_count: @db[:numeric_data_points].count
+            data_points_count: @db[:numeric_data_points].count,
+            change_notifications_count: change_notifications_count
           }
         end
 
@@ -91,6 +92,10 @@ module Komoku
         def unsubscribe(subscription)
           key, block = subscription
           !! @change_notifications[key].delete(block)
+        end
+
+        def change_notifications_count
+          @change_notifications.values.flatten.size
         end
 
         protected

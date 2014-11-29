@@ -46,6 +46,9 @@ module Komoku
         when 'fetch'
           send @storage.fetch data['fetch']['key'], symbolize_keys(data['fetch']['opts'])
 
+        when 'stats'
+          send(@storage.stats)
+
         # => {sub: {event: 'foo'}}
         # <= 'ack'
         when 'sub'
@@ -70,6 +73,10 @@ module Komoku
       end
 
       def close
+        @subscriptions.each do |sub|
+          @storage.unsubscribe sub
+        end
+        true
       end
 
       protected

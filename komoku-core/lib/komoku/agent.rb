@@ -83,7 +83,7 @@ module Komoku
             # handle_error('reconnect after failed push') { disconnect; connect }
           end
         end
-      end
+      end if async?
 
       state = timeout { @ws_events.pop }
       raise "some connection error" unless state == :connected # TODO some nicer exception + more info 
@@ -95,6 +95,8 @@ module Komoku
       return false unless @connected
       @should_be_connected = false
       @ws.close
+      @connection_thread.kill
+      @push_thread.kill if @push_thread
       true
     end
 
@@ -109,11 +111,11 @@ module Komoku
     def put(key, value, time = Time.now)
       msg = {put: {key: scoped_name(key), value: value, time: time}}
       if async?
-        logger.info "async put #{key} = #{value}"
+        logger.info "async put :#{key} = #{value} #{@push_queue.empty? ? '' : "(#{@push_queue.size} waiting)"}"
         @push_queue.push msg
         true
       else
-        logger.info "sync put #{key} = #{value}"
+        logger.info "sync put :#{key} = #{value}"
         conversation do
           logger.debug "  got lock for #{key} = #{value}"
           send msg
@@ -194,7 +196,7 @@ module Komoku
     # in case many thread are used
     def conversation
       @conn_lock.synchronize do
-        raise "messages are not empty, that's bad [#{@messages.pop}]" unless @messages.size == 0
+        raise "messages are not empty, that's bad [#{@messages.pop}]" unless @messages.empty?
         yield
       end
     end
@@ -218,6 +220,11 @@ module Komoku
       @ws.on :open do |event|
         @connected = true
         @ws_events.push :connected
+        if @reconnecting
+          @reconnecting = false
+          logger.info "reconnection successful"
+          Thread.new { handle_error("reply subscriptions") { reply_subscriptions }}
+        end
       end
 
       @ws.on :close do |event|
@@ -225,8 +232,9 @@ module Komoku
         @connected = false
         @ws_events.push :disconnected
         if @opts[:reconnect] && @should_be_connected
-          sleep 0.1
-          logger.debug "attempting to reconnect"
+          sleep 0.1 # FIXME this is inside EM
+          logger.debug "attempting to reconnect #{@name}"
+          @reconnecting = true
           init_connection
         end
       end
@@ -267,6 +275,17 @@ module Komoku
         result[new_key] = new_value
         result
       }
+    end
+
+    # after reconnect w e need to subscribe to notified values again
+    def reply_subscriptions
+      @subscriptions.keys.each do |key|
+        logger.info "replying subscription for #{key}"
+        conversation do
+          send({sub: {key: key}})
+          ret = @messages.pop
+        end
+      end
     end
   end
 end

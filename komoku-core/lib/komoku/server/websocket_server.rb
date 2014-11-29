@@ -77,8 +77,6 @@ module Komoku
             ws.onclose = lambda do |event|
               handler.close
               logger.info [:close_ws, event.code, event.reason].pretty_inspect
-              # FIXME call something on ws, we need to kill sender thread and stuff
-              #handler.on_close
             end
 
             ws.rack_response

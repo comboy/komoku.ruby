@@ -40,6 +40,21 @@ describe Komoku::Server do
       msgs.include?({'pub' => {'key' => 'foo', 'prev' => nil, 'curr' => 1}}).should == true
     end
 
+    it "should clean subscription after client disconnects" do
+      wsc = ws_client
+      wsc2 = ws_client
+      wsc.send({sub: {key: 'foo'}}.to_json)
+      wsc.read # ack
+      wsc2.send({stats: {}}.to_json)
+      stats = JSON.load(wsc2.read)
+      stats['change_notifications_count'].should == 1
+      wsc.close
+      sleep 0.1
+      wsc2.send({stats: {}}.to_json)
+      stats = JSON.load(wsc2.read)
+      stats['change_notifications_count'].should == 0
+    end
+
     #TODO should handle incorrect msg somehow
   end
 end

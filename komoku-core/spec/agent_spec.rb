@@ -208,9 +208,28 @@ describe Komoku::Agent do
       start_ws_server # now responding prorperly
       sleep 0.5 # give it some time to reconnect
       agent.get(:foo).should == 31337
+      agent.disconnect
       stop_ws_server
     end
 
+  end
+
+  context "handling connection problems" do
+    it "resubcribes after disconnection" do
+      start_ws_server
+      agent = Komoku::Agent.new server: ws_url, async: false, reconnect: true
+      agent.connect
+      notified = false
+      agent.on_change(:moo) { notified = true }
+      stop_ws_server
+      start_ws_server
+      sleep 0.5 # give it some time to reconnect
+      agent.put :moo, 1
+      sleep 0.5 # give it some time to receive notification
+      notified.should == true
+      agent.disconnect
+      stop_ws_server
+    end
   end
 
 end
