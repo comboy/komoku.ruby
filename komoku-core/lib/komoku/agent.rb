@@ -223,7 +223,7 @@ module Komoku
         if @reconnecting
           @reconnecting = false
           logger.info "reconnection successful"
-          Thread.new { handle_error("reply subscriptions") { reply_subscriptions }}
+          Thread.new { handle_error("reply subscriptions") { replay_subscriptions }}
         end
       end
 
@@ -278,7 +278,7 @@ module Komoku
     end
 
     # after reconnect w e need to subscribe to notified values again
-    def reply_subscriptions
+    def replay_subscriptions
       @subscriptions.keys.each do |key|
         logger.info "replying subscription for #{key}"
         conversation do
