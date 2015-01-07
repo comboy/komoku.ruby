@@ -2,6 +2,7 @@ require 'eventmachine'
 require 'faye/websocket'
 require 'json'
 require 'logger'
+require_relative 'core'
 
 module Komoku
 
@@ -251,9 +252,9 @@ module Komoku
               # TODO THINK should we 'unscope' this key if scope is used?
               # but then what about subs outside agent scope? should  they be possible?
               # perhaps scope should be some interface... agent.scope('foo')
-              handle_error("on change key=#{dp['key']}") do
+              Thread.new do handle_error("on change key=#{dp['key']}") do
                 blk.call(dp['key'], dp['curr'], dp['prev'])
-              end
+              end end
             end
           end
         else # non-event message

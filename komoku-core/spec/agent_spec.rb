@@ -153,6 +153,23 @@ describe Komoku::Agent do
       notified.should == true
       agent.get(:foo).should == 123
     end
+
+    it "can do get within on_change block" do
+      agent = Komoku::Agent.new server: ws_url, async: false
+      agent.connect
+      notified = false
+      agent.put :moo, 7
+      moo_get = nil
+      agent.on_change(:foo) do
+        moo_get = agent.get(:moo)
+        notified = true
+      end
+      agent.put :foo, 123
+      sleep 0.2 # some time to receive notification
+      notified.should == true
+      moo_get.should == 7
+      agent.get(:foo).should == 123
+    end
   end
 
   context "async" do
