@@ -50,6 +50,8 @@ module Komoku
           case key_type
           when 'boolean'
             @db[:boolean_data_points].insert(key_id: key[:id], value: value, time: time)
+          when 'string'
+            @db[:string_data_points].insert(key_id: key[:id], value: value, time: time)
           else
             @db[:numeric_data_points].insert(key_id: key[:id], value_avg: value, time: time, value_count: 1, value_max: value, value_min: value)
           end
@@ -63,6 +65,9 @@ module Komoku
           return nil unless key = get_key(name)
           if key[:type] == 'boolean'
             ret = @db[:boolean_data_points].where(key_id: key[:id]).order(Sequel.desc(:time)).first
+            ret && [ret[:time], ret[:value]]
+          elsif key[:type] == 'string'
+            ret = @db[:string_data_points].where(key_id: key[:id]).order(Sequel.desc(:time)).first
             ret && [ret[:time], ret[:value]]
           else
             ret = @db[:numeric_data_points].where(key_id: key[:id]).order(Sequel.desc(:time)).first
@@ -155,9 +160,15 @@ module Komoku
             column :key_id, :integer, index: true
             column :time, :timestamp, index: true
             column :value, :boolean
-            # TODO aggregation possible within the same table?
           end
 
+          # XXX we should probably separet strings within set from 'random' strings (aka log lines)
+          @db.create_table?(:string_data_points) do
+            primary_key :id
+            column :key_id, :integer, index: true
+            column :time, :timestamp, index: true
+            column :value, :text
+          end
         end
       end
     end

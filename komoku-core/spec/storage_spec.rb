@@ -106,6 +106,11 @@ describe Komoku::Storage do
       @storage.get(:foo).should == true
     end
 
+    it 'handles strings' do
+      @storage.put :moo, 'whatever'
+      @storage.get(:moo).should == 'whatever'
+    end
+
   end
 
   context 'fetch' do

@@ -43,6 +43,8 @@ module Komoku
           # TODO other types, probably also guess bool for [on,off] [yes,no]?
           if [true, false].include? value
             'boolean'
+          elsif !value.to_s.match(/\d+(\.\d+)?/)
+            'string'
           else
             'numeric'
           end

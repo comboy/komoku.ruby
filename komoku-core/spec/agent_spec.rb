@@ -52,6 +52,13 @@ describe Komoku::Agent do
       agent.get(:foo).should == false
     end
 
+    it "can handle string values" do
+      agent = Komoku::Agent.new server: ws_url, async: false
+      agent.connect
+      agent.put(:foo, 'oink')
+      agent.get(:foo).should == 'oink'
+    end
+
   end
 
   context "fetch data" do
