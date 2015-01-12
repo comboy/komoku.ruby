@@ -111,6 +111,18 @@ describe Komoku::Storage do
       @storage.get(:moo).should == 'whatever'
     end
 
+    it 'keeps string  type' do
+      @storage.put :foo, 'foo'
+      @storage.put :foo, 2
+      @storage.get(:foo).should == '2'
+    end
+
+    it 'keeps num type' do
+      @storage.put :bar, 1
+      @storage.put :bar, '2'
+      @storage.get(:bar).should == 2
+    end
+
   end
 
   context 'fetch' do

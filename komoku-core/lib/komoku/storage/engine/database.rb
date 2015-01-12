@@ -38,16 +38,14 @@ module Komoku
           end
         end
 
+        # TODO handle conflicting names of different data types
         def put(name, value, time)
-          # read previous values if we need them for notification
+          # read previous value if we need it for notification
           last_time, last_value = last(name) if @change_notifications[name]
 
-          # FIXME TODO steps definitions
-          default_step = 5 # seconds
-          key_type = guess_key_type(value)
-          key = get_key(name, key_type)
+          key = get_key name, guess_key_type(value)
 
-          case key_type
+          case key[:type]
           when 'boolean'
             @db[:boolean_data_points].insert(key_id: key[:id], value: value, time: time)
           when 'string'
