@@ -43,6 +43,7 @@ module Komoku
       @conn_lock = Mutex.new
     end
 
+    # Connect to server, blocking
     def connect
       return false if connected?
       # TODO U1 handle connection timeout
@@ -110,7 +111,7 @@ module Komoku
     end
 
     def put(key, value, time = Time.now)
-      msg = {put: {key: scoped_name(key), value: value, time: time}}
+      msg = {put: {key: scoped_name(key), value: value, time: time.to_i}}
       if async?
         logger.info "async put :#{key} = #{value} #{@push_queue.empty? ? '' : "(#{@push_queue.size} waiting)"}"
         @push_queue.push msg
@@ -165,7 +166,8 @@ module Komoku
       conversation do
         send({fetch: {key: key, opts: opts}})
         # TODO check if not error
-        @messages.pop
+        data = @messages.pop
+        data.map {|t, v| [Time.at(t), v] }
       end
     end
 

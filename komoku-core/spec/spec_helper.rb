@@ -98,6 +98,14 @@ module TestsHelpers
     "ws://127.0.0.1:7373/"
   end
 
+  def get_agent(opts={})
+    let :agent do
+      agent = Komoku::Agent.new({server: ws_url, async: false}.merge opts)
+      agent.connect
+      agent
+    end
+  end
+
 end
 
 RSpec.configure do |config|

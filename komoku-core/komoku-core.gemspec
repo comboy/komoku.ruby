@@ -23,6 +23,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "sequel"
   spec.add_dependency "sqlite3"
   spec.add_dependency "faye-websocket"
+  spec.add_dependency "catcher"
   spec.add_dependency "puma" # for websocket
   #spec.add_dependency "thin" # for websocket
   #spec.add_dependency "goliath" # for websocket

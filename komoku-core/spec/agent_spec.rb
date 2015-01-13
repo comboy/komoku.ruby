@@ -27,36 +27,36 @@ describe Komoku::Agent do
 
   context "put and get" do
     run_websocket_server
+    get_agent
 
-    it "should be able to store data" do
-      agent = Komoku::Agent.new server: ws_url, async: false
-      agent.connect
+    it "is able to store data" do
       agent.get(:foo).should == nil
       agent.get('foo').should == nil
       agent.put(:foo, 239).should == true
       agent.get(:foo).should == 239
     end
 
-    it "should properly return last stored value" do
-      agent = Komoku::Agent.new server: ws_url, async: false
-      agent.connect
+    it "returns last stored value" do
       agent.put(:foo, 123).should == true
       agent.put(:foo, 456).should == true
       agent.get(:foo).should == 456
     end
 
-    it "can handle boolean values" do
-      agent = Komoku::Agent.new server: ws_url, async: false
-      agent.connect
+    it "handles boolean values" do
       agent.put(:foo, false)
       agent.get(:foo).should == false
     end
 
-    it "can handle string values" do
-      agent = Komoku::Agent.new server: ws_url, async: false
-      agent.connect
+    it "handles string values" do
       agent.put(:foo, 'oink')
       agent.get(:foo).should == 'oink'
+    end
+
+    it "stores time properly" do
+      t = Time.now - 300
+      agent.put(:foo, 123, t)
+      agent.fetch(:foo)[0].first.should be_kind_of Time
+      agent.fetch(:foo)[0].first.to_i.should == t.to_i
     end
 
   end

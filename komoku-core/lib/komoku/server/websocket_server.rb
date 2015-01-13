@@ -2,6 +2,7 @@ require 'faye/websocket'
 require 'rack/content_length'
 require 'rack/chunked'
 require 'json'
+require 'catcher'
 
 module Komoku
   class Server
@@ -71,7 +72,7 @@ module Komoku
               rescue
                 ws.send({err: 'Parsing JSON failed'})
               end
-              handler.received(json)
+              Catcher.block("handle event") { handler.received(json) }
             end
 
             ws.onclose = lambda do |event|

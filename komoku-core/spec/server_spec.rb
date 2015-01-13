@@ -57,4 +57,17 @@ describe Komoku::Server do
 
     #TODO should handle incorrect msg somehow
   end
+
+  context "handler" do
+    it "converts time objs to_i" do
+      h = Komoku::Server::Handler.new
+      t = Time.now
+
+      x = {foo: 'bar', time: t}
+      h.__send__(:convert_time_to_i, x).should == {foo: 'bar', time: t.to_i}
+
+      x = [1,2,{a: [3, {b: t}]}]
+      h.__send__(:convert_time_to_i, x).should == [1,2,{a: [3, {b: t.to_i}]}]
+    end
+  end
 end

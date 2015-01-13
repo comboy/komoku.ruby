@@ -40,10 +40,15 @@ module Komoku
 
         # TODO handle conflicting names of different data types
         def put(name, value, time)
-          # read previous value if we need it for notification
-          last_time, last_value = last(name) if @change_notifications[name]
+          last_time, last_value = last(name) # TODO cahe it, cache it hard
 
           key = get_key name, guess_key_type(value)
+
+          if key[:opts][:same_value_resolution] && last_time && time > last_time
+            if last_value == value
+              return false if (time - last_time) < key[:opts][:same_value_resolution]
+            end
+          end
 
           case key[:type]
           when 'boolean'
@@ -56,6 +61,8 @@ module Komoku
 
           # notify about the change
           notify_change name, last_value, value if @change_notifications[name] && ( last_time.nil? || (time > last_time) && (last_value != value) )
+
+          return true
         end
 
         def last(name)
@@ -105,15 +112,21 @@ module Komoku
 
         # if key_type is provided, it will create key with given name if it doesn't exist yet
         def get_key(name, key_type=nil)
+          #TODO FIXME key opts should be stored with key and configurable when defining it
+          opts = { # temp defaults
+            # don't add points with the same value as previous one if they time diff < N
+            same_value_resolution: 600
+          }
+
           # OPTIMIZE caching, key type and id won't ever change
           key = @db[:keys].first(name: name.to_s)
           if key
-            {id: key[:id], type: key[:key_type]}
+            {id: key[:id], type: key[:key_type]}.merge opts: opts
           else
             return nil unless key_type
             # We need to create a new key, insert returns the id
             id = @db[:keys].insert(name: name, key_type: key_type)
-            {id: id, type: key_type}
+            {id: id, type: key_type}.merge opts: opts
           end
         end
 

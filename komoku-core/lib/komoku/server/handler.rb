@@ -36,8 +36,8 @@ module Komoku
         # => {put: {key: 'foo', value: 'blah'}}
         # <= 'ack'
         when 'put'
-          # TODO check args
-          @storage.put data['put']['key'], data['put']['value']
+          time = data['put']['time'] ? Time.at(data['put']['time']) : Time.now
+          @storage.put data['put']['key'], data['put']['value'], time
           send 'ack'
 
         when 'keys'
@@ -68,8 +68,9 @@ module Komoku
         end
       end
 
+      # TODO Serialization should probablyhappen in WebsocketServer or other type of server
       def send(data)
-        @conn.send data.to_json # FIXME serialization must happen in adapter
+        @conn.send serialize data
       end
 
       def close
@@ -80,6 +81,22 @@ module Komoku
       end
 
       protected
+
+      def serialize(obj)
+        convert_time_to_i(obj).to_json
+      end
+
+      def convert_time_to_i(obj)
+        if obj.kind_of? Array
+          obj.map{|x| convert_time_to_i x}
+        elsif obj.kind_of? Hash
+          Hash[ *obj.map{|k,v| [k, convert_time_to_i(v)]}.flatten(1) ]
+        elsif obj.kind_of? Time
+          obj.to_i
+        else
+          obj
+        end
+      end
 
       # TODO move to some comomn helpers
       def symbolize_keys(hash)
