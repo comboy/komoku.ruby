@@ -92,6 +92,16 @@ describe Komoku::Storage do
       stats[:keys_count].should == 2
       stats[:data_points_count].should == 3
     end
+
+    it 'destroys keys' do
+      @storage.put :foo, 1
+      @storage.get(:foo).should == 1
+      @storage.destroy_key :foo
+      @storage.get(:foo).should == nil
+      # make sure it also forgets the type
+      @storage.put :foo, true
+      @storage.get(:foo).should == true
+    end
   end
 
   context 'key opts' do
@@ -178,7 +188,7 @@ describe Komoku::Storage do
         @storage.put :foo, false, t0 - 2*60 - 10
 
         t = @storage.fetch(:foo, since: t0 - 660, step: '1M')
-        t.map(&:last).map {|x| x.round}.should == [0, 30, 40, 0, 0, 60, 60, 60, 50, 0, 0]
+        t.map(&:last).map {|x| x.round(2)}.should == [0, 30, 40, 0, 0, 60, 60, 60, 50, 0, 0].map{|x| (x/60.0).round(2)}
         t[0].first.should == t0 - 600
         t[1].first.should == t0 - 600 + 60
      end

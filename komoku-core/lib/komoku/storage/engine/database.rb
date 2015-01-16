@@ -82,7 +82,7 @@ module Komoku
             end
             st += t - lt if cv == true
             lt = t
-            [t, st]
+            [t, st / step_span.to_f]
           end
         end
 
@@ -116,16 +116,8 @@ module Komoku
         def last(name)
           # OPTIMIZE caching
           return nil unless key = get_key(name)
-          if key[:type] == 'boolean'
-            ret = @db[:boolean_data_points].where(key_id: key[:id]).order(Sequel.desc(:id)).first
-            ret && [ret[:time], ret[:value]]
-          elsif key[:type] == 'string'
-            ret = @db[:string_data_points].where(key_id: key[:id]).order(Sequel.desc(:id)).first
-            ret && [ret[:time], ret[:value]]
-          else
-            ret = @db[:numeric_data_points].where(key_id: key[:id]).order(Sequel.desc(:id)).first
-            ret && [ret[:time], ret[:value_avg]]
-          end
+          ret = @db[type_table key[:type]].where(key_id: key[:id]).order(Sequel.desc(:id)).first
+          ret && [ret[:time], key[:type] == 'numeric' ? ret[:value_avg] : ret[:value]]
         end
 
         # Return list of all stored keys
@@ -154,6 +146,14 @@ module Komoku
 
         def change_notifications_count
           @change_notifications.values.flatten.size
+        end
+
+        def destroy_key(name)
+          key = get_key name
+          return false unless key
+          @db[type_table key[:type]].where(key_id: key[:id]).delete # goodbye beautiful data points
+          @db[:keys].where(id: key[:id]).delete
+          true
         end
 
         protected
@@ -190,6 +190,11 @@ module Komoku
             # TODO rescue exceptions?
             block.call(key, value, last_value)
           end
+        end
+
+        def type_table(type_name)
+          raise "unknown type" unless [:boolean, :numeric, :string].include? type_name.to_sym
+          "#{type_name}_data_points".to_sym
         end
 
         def prepare_database

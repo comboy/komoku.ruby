@@ -36,6 +36,11 @@ module Komoku
       @engine.fetch(key, o.merge(limit: 100))
     end
 
+    # Remove all data associated with given key
+    def destroy_key(key)
+      @engine.destroy_key key.to_s
+    end
+
     # TODO THINK should implementation of events be here or specific engine?
     def on_change(key, &block)
       @engine.on_change(key.to_s, &block)
