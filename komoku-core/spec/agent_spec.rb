@@ -63,30 +63,33 @@ describe Komoku::Agent do
 
   context "fetch data" do
     run_websocket_server
+    get_agent
 
-    it "should be able to fetch last values" do
-      agent = Komoku::Agent.new server: ws_url, async: false
-      agent.connect
+    it "is able to fetch last values" do
       agent.fetch(:foo).should == []
       agent.put(:foo, 6); agent.put(:foo, 9)
       agent.fetch(:foo).map(&:last).should == [6,9]
     end
 
-    it "should list stored keys" do
-      agent = Komoku::Agent.new server: ws_url, async: false
-      agent.connect
+    it "lists stored keys" do
       agent.keys.should == {}
       agent.put(:foo, 1)
       agent.put(:bar, 2)
       agent.keys.keys.sort.should == %w{bar foo}
     end
 
-    it "should list stored keys with values" do
-      agent = Komoku::Agent.new server: ws_url, async: false
-      agent.connect
+    it "lists stored keys with values" do
       agent.put(:foo, 1)
       agent.put(:bar, false)
       agent.keys(include: [:value]).should == {'foo' => {type: 'numeric', value: 1}, 'bar' => {type: 'boolean', value: false}}
+    end
+
+    it "respects :since" do
+      agent.put(:foo, 1, Time.now - 2)
+      agent.put(:foo, 2)
+      data = agent.fetch(:foo, since: Time.now - 1)
+      data.size.should == 1
+      data[0].last.should == 2
     end
 
   end

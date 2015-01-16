@@ -44,6 +44,8 @@ module Komoku
           send @storage.keys(symbolize_keys(data['keys']))
 
         when 'fetch'
+          # somebody killed a kitten somewhere because of the line below FIXME
+          data['fetch']['opts']['since'] = Time.at(data['fetch']['opts']['since']) if data['fetch']['opts'] && data['fetch']['opts']['since'] && data['fetch']['opts']['since'].kind_of?(Float)
           send @storage.fetch data['fetch']['key'], symbolize_keys(data['fetch']['opts'])
 
         when 'stats'
@@ -83,16 +85,16 @@ module Komoku
       protected
 
       def serialize(obj)
-        convert_time_to_i(obj).to_json
+        convert_time_to_f(obj).to_json
       end
 
-      def convert_time_to_i(obj)
+      def convert_time_to_f(obj)
         if obj.kind_of? Array
-          obj.map{|x| convert_time_to_i x}
+          obj.map{|x| convert_time_to_f x}
         elsif obj.kind_of? Hash
-          Hash[ *obj.map{|k,v| [k, convert_time_to_i(v)]}.flatten(1) ]
+          Hash[ *obj.map{|k,v| [k, convert_time_to_f(v)]}.flatten(1) ]
         elsif obj.kind_of? Time
-          obj.to_i
+          obj.to_f
         else
           obj
         end

@@ -59,15 +59,15 @@ describe Komoku::Server do
   end
 
   context "handler" do
-    it "converts time objs to_i" do
+    it "converts time objs to_f" do
       h = Komoku::Server::Handler.new
       t = Time.now
 
       x = {foo: 'bar', time: t}
-      h.__send__(:convert_time_to_i, x).should == {foo: 'bar', time: t.to_i}
+      h.__send__(:convert_time_to_f, x).should == {foo: 'bar', time: t.to_f}
 
       x = [1,2,{a: [3, {b: t}]}]
-      h.__send__(:convert_time_to_i, x).should == [1,2,{a: [3, {b: t.to_i}]}]
+      h.__send__(:convert_time_to_f, x).should == [1,2,{a: [3, {b: t.to_f}]}]
     end
   end
 end

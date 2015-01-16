@@ -17,24 +17,72 @@ module Komoku
           super
         end
 
+        # Whole thing is a mess for now, did not decide the api yet
+        # Movi it to some separet subclass since it's gonna grow
+        # opts:
+        # * :step - desired resolution of fetched data e.g. 1S, 5M, 1h, 1d
+        # * :since
+        # TODO add some check if not too many points are returned (since / span)
+        # unless some explicit option (num of points) is provided
         def fetch(name, opts = {})
           return [] unless key = get_key(name)
+          return fetch_bool(key, opts) if key[:type] == 'boolean'
+
+          # below only numeric type
           scope = @db[:numeric_data_points].where(key_id: key[:id])
           scope = scope.where('time > :since', since: opts[:since]) if opts[:since]
-          # TODO use date_trunc for pg (main use case)
+
           if opts[:step]
             s = step opts[:step] # see Engine::Base#step
+            # TODO use date_trunc for pg (main use case)
             f_time = "(strftime('%s',time)/#{s[:span]})*#{s[:span]}"
             scope = scope.select(Sequel.lit "datetime(#{f_time}, 'unixepoch') AS time").group(Sequel.lit f_time).select_append { avg(value_avg).as(value_avg) }
           end
+
           scope = scope.order(Sequel.desc(:time)).limit(100) # TODO limit option and order, these are defaults for testing
           #puts "SQL: #{scope.sql}"
           rows = scope.all
           rows.reverse.map do |r|
-            # for reasons unknown to me sequel returns string instead of time object for sqlite with our custom  select
-            time = r[:time].kind_of?(String) ? Time.parse(r[:time]) : r[:time]
-            value = r[:value_avg]
-            [time, value]
+            [time_wrap(r[:time]), r[:value_avg]]
+          end
+        end
+
+        # Boolean works like this, if you have true at time A and false at point B, then it is assumed
+        # that value was true until B. Fetch should return percentage of time with true for each step
+        def fetch_bool(key, opts = {})
+          # TODO only handling with :since param
+          scope = @db[:boolean_data_points].where(key_id: key[:id])
+          scope = scope.where('time > :since', since: opts[:since]) if opts[:since]
+
+          step_span = opts[:step] ? step(opts[:step])[:span] : guess_step_span(opts)
+          # TODO brute force, optimize, aggregate
+          rows = scope.order(:time).all
+
+          time_values = []
+          t = opts[:since]
+          loop do
+            t += step_span
+            break if t > Time.now
+            time_values.push t
+          end
+
+          lt = opts[:since] # last time
+          cv = nil # current value
+          st = 0 # sum true
+          i = 0 # rows index
+          time_values.map do |t|
+            st = 0
+            loop do
+              row = rows[i]
+              break unless row && time_wrap(row[:time]) <= t && time_wrap(row[:time]) > lt
+              st += row[:time] - lt if cv == true
+              cv = row[:value]
+              lt = row[:time]
+              i += 1
+            end
+            st += t - lt if cv == true
+            lt = t
+            [t, st]
           end
         end
 
@@ -69,13 +117,13 @@ module Komoku
           # OPTIMIZE caching
           return nil unless key = get_key(name)
           if key[:type] == 'boolean'
-            ret = @db[:boolean_data_points].where(key_id: key[:id]).order(Sequel.desc(:time)).first
+            ret = @db[:boolean_data_points].where(key_id: key[:id]).order(Sequel.desc(:id)).first
             ret && [ret[:time], ret[:value]]
           elsif key[:type] == 'string'
-            ret = @db[:string_data_points].where(key_id: key[:id]).order(Sequel.desc(:time)).first
+            ret = @db[:string_data_points].where(key_id: key[:id]).order(Sequel.desc(:id)).first
             ret && [ret[:time], ret[:value]]
           else
-            ret = @db[:numeric_data_points].where(key_id: key[:id]).order(Sequel.desc(:time)).first
+            ret = @db[:numeric_data_points].where(key_id: key[:id]).order(Sequel.desc(:id)).first
             ret && [ret[:time], ret[:value_avg]]
           end
         end
@@ -130,6 +178,11 @@ module Komoku
           end
         end
 
+        # for reasons unknown to me sequel returns string instead of time object for sqlite with our custom select
+        def time_wrap(obj)
+          obj.kind_of?(String) ? Time.parse(obj) : obj
+        end
+
         def notify_change(key, last_value, value)
           return unless @change_notifications[key]
           @change_notifications[key].each do |block|
@@ -181,7 +234,9 @@ module Komoku
             column :value, :text
           end
         end
-      end
-    end
-  end
-end
+
+
+      end # Database
+    end # Engine
+  end # Storage
+end # Komoku

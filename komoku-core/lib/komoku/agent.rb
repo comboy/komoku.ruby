@@ -111,7 +111,7 @@ module Komoku
     end
 
     def put(key, value, time = Time.now)
-      msg = {put: {key: scoped_name(key), value: value, time: time.to_i}}
+      msg = {put: {key: scoped_name(key), value: value, time: time.to_f}}
       if async?
         logger.info "async put :#{key} = #{value} #{@push_queue.empty? ? '' : "(#{@push_queue.size} waiting)"}"
         @push_queue.push msg
@@ -164,6 +164,7 @@ module Komoku
 
     def fetch(key, opts={})
       conversation do
+        opts[:since] = opts[:since].to_f if opts[:since] && opts[:since].kind_of?(Time)
         send({fetch: {key: key, opts: opts}})
         # TODO check if not error
         data = @messages.pop

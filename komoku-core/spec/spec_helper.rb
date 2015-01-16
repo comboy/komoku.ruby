@@ -102,6 +102,7 @@ module TestsHelpers
     let :agent do
       agent = Komoku::Agent.new({server: ws_url, async: false}.merge opts)
       agent.connect
+      #agent.logger = Logger.new STDOUT
       agent
     end
   end

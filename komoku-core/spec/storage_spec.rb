@@ -54,6 +54,12 @@ describe Komoku::Storage do
       end
     end
 
+    it 'returns last value' do
+      @storage.put :foo, 1
+      @storage.put :foo, 2
+      @storage.get(:foo).should == 2
+    end
+
     it 'returns proper data when using :since' do
       @storage.put :foo, 1, Time.now - 7*60
       @storage.put :foo, 2, Time.now - 4*60
@@ -86,6 +92,17 @@ describe Komoku::Storage do
       stats[:keys_count].should == 2
       stats[:data_points_count].should == 3
     end
+  end
+
+  context 'key opts' do
+    before do
+      @storage = Komoku::Storage.new engine: Komoku::Storage::Engine::Database.new(db: Sequel.sqlite)
+    end
+
+    it 'handles same_value_resolution' do
+      # TODO
+    end
+
   end
 
   context 'type handling' do
@@ -148,6 +165,23 @@ describe Komoku::Storage do
       it { @base.send(:step, '5M').should == {unit: 'minute', count: 5, span: 300} }
       it { @base.send(:step, '2H').should == {unit: 'hour', count: 2, span: 3600*2} }
       it { @base.send(:step, '1m').should include({unit: 'month', count: 1} ) }
+    end
+
+    context "boolean" do
+      it "10M" do
+        t0 = Time.now - Time.now.sec
+        @storage.put :foo, true, t0 - 9*60 - 30
+        @storage.put :foo, true, t0 - 8*60 - 30
+        @storage.put :foo, false, t0 - 8*60 - 20
+        @storage.put :foo, true, t0 - 6*60
+        @storage.put :foo, true, t0 - 3*60
+        @storage.put :foo, false, t0 - 2*60 - 10
+
+        t = @storage.fetch(:foo, since: t0 - 660, step: '1M')
+        t.map(&:last).map {|x| x.round}.should == [0, 30, 40, 0, 0, 60, 60, 60, 50, 0, 0]
+        t[0].first.should == t0 - 600
+        t[1].first.should == t0 - 600 + 60
+     end
     end
   end
 

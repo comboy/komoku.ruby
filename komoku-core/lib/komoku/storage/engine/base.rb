@@ -50,6 +50,12 @@ module Komoku
           end
         end
 
+        def guess_step_span(opts)
+          raise "no guessing without since yet" unless opts[:since] #TODO
+          timespan = Time.now - opts[:since]
+          timespan / 50.0 # FIXME we want to make steps human friendly 1d -> 1h 1m -> 1d 10M - 30s etc.
+        end
+
         def step(name)
           units = {
             'S' => 'second',
