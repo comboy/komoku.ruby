@@ -59,7 +59,6 @@ module Komoku
             #handler = SocketHandler.new ws, env
 
             ws.onopen = lambda do |event|
-              logger.info "========= ONOPEN"
               handler = Server::Handler.new storage: @storage, conn: ws
               # TODO FIXME authentication
             end

@@ -67,6 +67,20 @@ puts agent.get :foo
 
 You will get better idea what can be done by looking in [spec/agent_spec.rb](spec/agent_spec.rb)
 
+# Dev
+
+Running tests:
+
+```
+bundle exec rake spec
+```
+
+Running performance tests:
+
+```
+bundle rspec spec/performance.rb --format documentation
+```
+
 ## Any feedback is welcome
 
 Open issues, ask questions, tell me I suck at coding, feedback is good. 

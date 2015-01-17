@@ -15,6 +15,7 @@ module Komoku
           #@db.loggers << Logger.new(STDOUT)
           prepare_database
           @change_notifications = {}
+          @keys_cache = {}
           super
         end
 
@@ -161,6 +162,7 @@ module Komoku
         def destroy_key(name)
           key = get_key name
           return false unless key
+          @keys_cache.delete name
           @db[type_table key[:type]].where(key_id: key[:id]).delete # goodbye beautiful data points
           @db[:keys].where(id: key[:id]).delete
           true
@@ -178,16 +180,18 @@ module Komoku
 
         # if key_type is provided, it will create key with given name if it doesn't exist yet
         def get_key(name, key_type=nil)
+          name = name.to_s
+          return @keys_cache[name] if @keys_cache[name]
+
           #TODO FIXME key opts should be stored with key and configurable when defining it
           opts = { # temp defaults
             # don't add points with the same value as previous one if they time diff < N
             same_value_resolution: 600
           }
 
-          # OPTIMIZE caching, key type and id won't ever change
-          key = @db[:keys].first(name: name.to_s)
+          key = @db[:keys].first(name: name)
           if key
-            {id: key[:id], type: key[:key_type]}.merge opts: opts
+            @keys_cache[name] = {id: key[:id], type: key[:key_type]}.merge opts: opts
           else
             return nil unless key_type
             raise "key creation failed" unless create_key(name, key_type)

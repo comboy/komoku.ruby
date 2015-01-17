@@ -22,10 +22,12 @@ Gem::Specification.new do |spec|
   # FIXME most dependencies should be optional
   spec.add_dependency "sequel"
   spec.add_dependency "sqlite3"
+  spec.add_dependency "pg"
   spec.add_dependency "faye-websocket"
   spec.add_dependency "catcher"
   spec.add_dependency "puma" # for websocket
   #spec.add_dependency "thin" # for websocket
+  #spec.add_dependency "permessage_deflate" # for websocket
   #spec.add_dependency "goliath" # for websocket
   spec.add_dependency "eventmachine" # websocket client
   #spec.add_dependency "msgpack" # websocket client
@@ -35,6 +37,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rspec"
   spec.add_development_dependency "ZenTest"
   spec.add_development_dependency "rspec-autotest"
+  spec.add_development_dependency "ruby-prof"
   spec.add_development_dependency "wirble"
   spec.add_development_dependency "did_you_mean"
 end
