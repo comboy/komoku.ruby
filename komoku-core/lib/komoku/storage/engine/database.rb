@@ -1,5 +1,6 @@
 require 'sequel'
 require 'sqlite3'
+require 'pg'
 require 'logger'
 require 'time'
 
@@ -120,6 +121,15 @@ module Komoku
           ret && [ret[:time], key[:type] == 'numeric' ? ret[:value_avg] : ret[:value]]
         end
 
+        # TODO I don't like this name, maybe this can be just part of #fetch
+        def all(name)
+          return nil unless key = get_key(name)
+          @db[type_table key[:type]].where(key_id: key[:id]).order(:time).all.map do |x|
+            # FIXME numeric aggregation data gets lost
+            [x[:time], key[:type] == 'numeric' ? x[:value_avg] : x[:value]]
+          end
+        end
+
         # Return list of all stored keys
         def keys(opts = {})
           # TODO keys are strings, type is symbol, inconsistent
@@ -156,6 +166,14 @@ module Komoku
           true
         end
 
+        def create_key(name, key_type, opts={})
+          # TODO create_key will probably be used by define, so this could be a good place to check
+          # type compatibility and possibility of upgrading opts, otherwise throw an exception
+          return false if key = get_key(name)
+          @db[:keys].insert(name: name, key_type: key_type)
+          true
+        end
+
         protected
 
         # if key_type is provided, it will create key with given name if it doesn't exist yet
@@ -172,9 +190,8 @@ module Komoku
             {id: key[:id], type: key[:key_type]}.merge opts: opts
           else
             return nil unless key_type
-            # We need to create a new key, insert returns the id
-            id = @db[:keys].insert(name: name, key_type: key_type)
-            {id: id, type: key_type}.merge opts: opts
+            raise "key creation failed" unless create_key(name, key_type)
+            get_key name
           end
         end
 
@@ -200,16 +217,15 @@ module Komoku
         def prepare_database
           @db.create_table?(:datasets) do
             primary_key :id
-            column :id, :primary_key
-            column :name, :string
+            column :name, String
           end
 
           @db.create_table?(:keys) do
             #column :id, :primary_key
             primary_key :id
             column :dataset_id, :integer, index: true
-            column :name, :string
-            column :key_type, :string, index: true
+            column :name, String
+            column :key_type, String, index: true
           end
 
           @db.create_table?(:numeric_data_points) do

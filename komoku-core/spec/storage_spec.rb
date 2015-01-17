@@ -102,6 +102,33 @@ describe Komoku::Storage do
       @storage.put :foo, true
       @storage.get(:foo).should == true
     end
+
+    it 'creates  keys' do
+      @storage.keys.should == {}
+      @storage.create_key :moo, 'boolean'
+      @storage.keys.keys.should == ['moo']
+      @storage.keys['moo'][:type].should == 'boolean'
+    end
+
+    it 'exports a nd imports' do
+      t0 = Time.now - 60
+      t1 = Time.now
+      @storage.put :foo, 1, t0
+      @storage.put :foo, 2, t1
+      @storage.put :bar, true
+      @storage.put :moo, 'bang'
+      @storage2 = Komoku::Storage.new engine: Komoku::Storage::Engine::Database.new(db: Sequel.sqlite)
+      @storage2.keys.should == {}
+
+      @storage2.import @storage.export
+      @storage2.get(:foo).should == 2
+      @storage2.get(:bar).should == true
+      @storage2.get(:moo).should == 'bang'
+      f = @storage2.fetch(:foo)
+      f[0].first.to_i.should == t0.to_i
+      f[1].first.to_i.should == t1.to_i
+      f[0].last.should == 1
+    end
   end
 
   context 'key opts' do

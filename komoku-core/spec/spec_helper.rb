@@ -9,6 +9,7 @@ File.unlink tmp_db if File.exists? tmp_db
 
 FileUtils.mkdir_p "tmp"
 
+$spec_timeout = 10
 
 module TestsHelpers
 
@@ -118,7 +119,7 @@ RSpec.configure do |config|
 
   # at this point some errors may cause it to hang indefinitely so let's get the backtrace right away
   config.around(:each) do |example|
-    Timeout::timeout(10) { example.run }
+    Timeout::timeout($spec_timeout) { example.run }
   end
 
 end
