@@ -37,8 +37,13 @@ module Komoku
           if opts[:step]
             s = step opts[:step] # see Engine::Base#step
             # TODO use date_trunc for pg (main use case)
-            f_time = "(strftime('%s',time)/#{s[:span]})*#{s[:span]}"
-            scope = scope.select(Sequel.lit "datetime(#{f_time}, 'unixepoch') AS time").group(Sequel.lit f_time).select_append { avg(value_avg).as(value_avg) }
+            if @db.adapter_scheme == :postgres
+              f_time = "floor((extract(epoch from time::timestamp with time zone)/#{s[:span]}))*#{s[:span]}"
+              scope = scope.select(Sequel.lit "to_timestamp(#{f_time}) AS time").group(Sequel.lit f_time).select_append { avg(value_avg).as(value_avg) }
+            else # sqlite
+              f_time = "(strftime('%s',time)/#{s[:span]})*#{s[:span]}"
+              scope = scope.select(Sequel.lit "datetime(#{f_time}, 'unixepoch') AS time").group(Sequel.lit f_time).select_append { avg(value_avg).as(value_avg) }
+            end
           end
 
           scope = scope.order(Sequel.desc(:time)).limit(100) # TODO limit option and order, these are defaults for testing

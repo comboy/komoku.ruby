@@ -9,7 +9,7 @@ File.unlink tmp_db if File.exists? tmp_db
 
 FileUtils.mkdir_p "tmp"
 
-$spec_timeout = 10
+$spec_timeout = 20
 
 module TestsHelpers
 

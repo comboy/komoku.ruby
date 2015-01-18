@@ -75,6 +75,12 @@ Running tests:
 bundle exec rake spec
 ```
 
+with PG:
+
+```
+TEST_DB='postgres://komoku_test:pass@localhost/komoku_test' bundle exec rake spec
+```
+
 Running performance tests:
 
 ```
