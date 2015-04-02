@@ -93,6 +93,22 @@ module Komoku
           end
         end
 
+        # TODO this need some better name and probably sohuld be integrated into fetch
+        # (but then it returns something different, so consistency..)
+        def fetch_timespans(name, opts={})
+          key = get_key name
+          raise "only boolean" unless key[:type] == 'boolean' # TODO actually it could work for others, especially strings as state
+          #return [] unless key
+          # Pretty sad N+1 but it should be fine for this kind of stat, maybe cache some day
+          n = opts[:limit] || 20
+
+          ct = Time.now
+          last = @db[:boolean_data_points].where('time < :ct', ct: ct).order(Sequel.desc(:time)).first
+          
+          pp last
+
+        end
+
         # TODO handle conflicting names of different data types
         def put(name, value, time)
           last_time, last_value = last(name) # TODO cahe it, cache it hard

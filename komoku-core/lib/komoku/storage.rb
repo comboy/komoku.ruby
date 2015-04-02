@@ -37,6 +37,11 @@ module Komoku
       @engine.fetch(key, o.merge(limit: 100))
     end
 
+    # FIXME rename maybe integarte into #fetch
+    def fetch_timespans(key, opts={})
+      @engine.fetch_timespans(key, opts)
+    end
+
     # Define key
     def create_key(key, key_type, opts={})
       # TODO key name validation

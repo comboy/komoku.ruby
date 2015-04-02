@@ -154,7 +154,12 @@ describe Komoku::Storage do
         end
 
         it 'handles same_value_resolution' do
-          # TODO
+          # same value resolution opt is currently set by default to 600
+          @storage.put :foo, 1, Time.now - 700
+          @storage.put :foo, 1, Time.now - 100
+          @storage.put :foo, 1
+          @storage.put :foo, 1
+          @storage.fetch(:foo).size.should == 2
         end
 
       end
@@ -237,6 +242,19 @@ describe Komoku::Storage do
             t[1].first.should == t0 - 600 + 60
          end
         end
+
+        context "timestamps" do
+          it "limit 20" do
+            t0 = Time.now
+            @storage.put :foo, true, t0 - 600
+            @storage.put :foo, true, t0 - 580
+            @storage.put :foo, false, t0 - 500
+            @storage.put :foo, true, t0 - 200
+            @storage.put :foo, true, t0 - 10
+
+            ret = @storage.fetch_timespans(:foo, limit: 20)
+          end
+        end 
       end
 
       context "change notifications" do

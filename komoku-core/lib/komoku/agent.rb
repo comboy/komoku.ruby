@@ -111,6 +111,8 @@ module Komoku
     end
 
     def put(key, value, time = Time.now)
+      # TODO if key type is numeric .to_f the value
+      # or should it be done by storage? probably storage
       msg = {put: {key: scoped_name(key), value: value, time: time.to_f}}
       if async?
         logger.info "async put :#{key} = #{value} #{@push_queue.empty? ? '' : "(#{@push_queue.size} waiting)"}"
