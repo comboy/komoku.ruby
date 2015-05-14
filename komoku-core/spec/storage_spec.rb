@@ -215,6 +215,26 @@ describe Komoku::Storage do
           @storage.fetch(:foo, step: '1M').should == [[t0, 1.5], [t0+60, 3.5]]
         end
 
+        it "respects :since" do
+          t0 = Time.new 2014, 1, 1
+          @storage.put :foo, 1, t0
+          @storage.put :foo, 2, t0 + 30
+          @storage.put :foo, 3, t0 + 70
+          @storage.put :foo, 4, t0 + 100
+          @storage.put :foo, 5, t0 + 200
+          @storage.fetch(:foo, since: t0+70).should == [[t0 + 100, 4], [t0 + 200, 5]]
+        end
+
+        it "respects :until" do
+          t0 = Time.new 2014, 1, 1
+          @storage.put :foo, 1, t0
+          @storage.put :foo, 2, t0 + 30
+          @storage.put :foo, 3, t0 + 70
+          @storage.put :foo, 4, t0 + 100
+          @storage.put :foo, 5, t0 + 200
+          @storage.fetch(:foo, until: t0+70).should == [[t0, 1], [t0 + 30, 2]]
+        end
+
         context "steps" do
           before do
             @base = Komoku::Storage::Engine::Base.new
@@ -243,8 +263,8 @@ describe Komoku::Storage do
          end
         end
 
-        context "timestamps" do
-          it "limit 20" do
+        context "timespans" do
+          it "returns timespans when using since param" do
             t0 = Time.now
             @storage.put :foo, true, t0 - 600
             @storage.put :foo, true, t0 - 580
@@ -252,9 +272,17 @@ describe Komoku::Storage do
             @storage.put :foo, true, t0 - 200
             @storage.put :foo, true, t0 - 10
 
-            ret = @storage.fetch_timespans(:foo, limit: 20)
+            ret = @storage.fetch(:foo, since: Time.now - 3000, as: 'timespans')
+            ret[0][0].should be_within(1).of t0-600
+            ret[0][1].should be_within(1).of t0-500
+            ret[1][0].should be_within(1).of t0-200
+            ret[1][1].should be_nil
+
+            ret = @storage.fetch(:foo, since: t0-300, as: 'timespans')
+            ret[0][0].should be_within(1).of t0-200
+            ret[0][1].should be_nil
           end
-        end 
+        end
       end
 
       context "change notifications" do
@@ -307,10 +335,10 @@ describe Komoku::Storage do
         it "provides correct arguments in the notification" do
           @storage.put :foo, 1
           notified = false
-          @storage.on_change(:foo) do |key, curr, prev|
-            key.should == 'foo'
-            prev.should == 1
-            curr.should == 2
+          @storage.on_change(:foo) do |change|
+            change[:key].should == 'foo'
+            change[:prev].should == 1
+            change[:curr].should == 2
             notified = true
           end
           @storage.put :foo, 2
@@ -330,5 +358,5 @@ describe Komoku::Storage do
 
       end
     end # adapter context
-  end # adapters 
+  end # adapters
 end

@@ -24,15 +24,19 @@ module Komoku
         # opts:
         # * :step - desired resolution of fetched data e.g. 1S, 5M, 1h, 1d
         # * :since
+        # * :until
+        # * :format - 'timespans'
         # TODO add some check if not too many points are returned (since / span)
         # unless some explicit option (num of points) is provided
         def fetch(name, opts = {})
           return [] unless key = get_key(name)
+          return fetch_timespans(key, opts) if opts[:as] == 'timespans'
           return fetch_bool(key, opts) if key[:type] == 'boolean'
 
           # below only numeric type
           scope = @db[:numeric_data_points].where(key_id: key[:id])
           scope = scope.where('time > :since', since: opts[:since]) if opts[:since]
+          scope = scope.where('time < :until', until: opts[:until]) if opts[:until]
 
           if opts[:step]
             s = step opts[:step] # see Engine::Base#step
@@ -93,20 +97,45 @@ module Komoku
           end
         end
 
-        # TODO this need some better name and probably sohuld be integrated into fetch
-        # (but then it returns something different, so consistency..)
-        def fetch_timespans(name, opts={})
-          key = get_key name
+        # Fetch boolean values as timespans
+        def fetch_timespans(key, opts={})
           raise "only boolean" unless key[:type] == 'boolean' # TODO actually it could work for others, especially strings as state
           #return [] unless key
           # Pretty sad N+1 but it should be fine for this kind of stat, maybe cache some day
-          n = opts[:limit] || 20
 
-          ct = Time.now
+          # SINCE only
+          since = opts[:since]
+          since ||= Time.now - 24*3600
+
+          # we assume we want "true" timespans this should actually be an option TODO
+          timespans = []
+
+          # FIXME ugly ugly ugly
+
+          ct = since
           last = @db[:boolean_data_points].where('time < :ct', ct: ct).order(Sequel.desc(:time)).first
-          
-          pp last
+          prev_value = (last && last[:value]) || false
 
+
+          loop do
+            if prev_value == true
+              row = @db[:boolean_data_points].where('time > :ct', ct: ct).where(value: false).order(Sequel.asc(:time)).first
+              unless row
+                timespans << [ct, nil]
+                break
+              end
+              timespans << [ct, row[:time]]
+              ct = row[:time]
+              prev_value = false
+            else
+              row = @db[:boolean_data_points].where('time > :ct', ct: ct).where(value: true).order(Sequel.asc(:time)).first
+              break unless row
+              ct = row[:time]
+              prev_value = true
+            end
+          end
+
+          return timespans
         end
 
         # TODO handle conflicting names of different data types
@@ -131,7 +160,9 @@ module Komoku
           end
 
           # notify about the change
-          notify_change name, last_value, value if @change_notifications[name] && ( last_time.nil? || (time > last_time) && (last_value != value) )
+          if @change_notifications[name] && ( last_time.nil? || (time > last_time) && (last_value != value) )
+            notify_change name, [last_time, last_value], [time, value]
+          end
 
           return true
         end
@@ -225,12 +256,20 @@ module Komoku
           obj.kind_of?(String) ? Time.parse(obj) : obj
         end
 
-        def notify_change(key, last_value, value)
+        def notify_change(key, prev, curr)
           return unless @change_notifications[key]
+          prev_time, prev_value = prev
+          curr_time, curr_value = curr
           @change_notifications[key].each do |block|
-            # we provide key as one of the args in case some pattern matching is implmented later e.g. notify on foo__*
             # TODO rescue exceptions?
-            block.call(key, value, last_value)
+            change = {
+              key: key, # provide key in case some pattern matching is implmented later e.g. notify on foo__*
+              prev: prev_value, # APICHANGE seriously these keys sucks
+              curr: curr_value,
+              prev_time: prev_time,
+              curr_time: curr_time
+            }
+            block.call(change)
           end
         end
 

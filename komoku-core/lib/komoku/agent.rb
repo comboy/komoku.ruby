@@ -170,7 +170,12 @@ module Komoku
         send({fetch: {key: key, opts: opts}})
         # TODO check if not error
         data = @messages.pop
-        data.map {|t, v| [Time.at(t), v] }
+        # TODO this time handling is crazy and needs some more sane fix istead of special cases
+        if opts[:as] == 'timespans'
+          data.map {|t, v| [Time.at(t), Time.at(v)] }
+        else
+          data.map {|t, v| [Time.at(t), v] }
+        end
       end
     end
 

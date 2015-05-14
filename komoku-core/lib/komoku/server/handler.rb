@@ -56,8 +56,8 @@ module Komoku
         when 'sub'
           s = data['sub']
           if s['key']
-            @subscriptions << @storage.on_change(s['key']) do |key, curr, prev|
-              send({pub: {key: key, prev: prev, curr: curr}})
+            @subscriptions << @storage.on_change(s['key']) do |change|
+              send({pub: change})
             end
           elsif s['event']
             # TODO subscribe to event
