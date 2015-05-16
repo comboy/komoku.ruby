@@ -25,6 +25,12 @@ module Komoku
           raise "implement me!"
         end
 
+        # Return previous stored value. Returns [timestamp, value]
+        # It returns first *different* previous value.
+        def previous(key)
+          raise "implement me!"
+        end
+
         # Subscribe to key value changes
         def on_change(key, &block)
           raise "implement me!"

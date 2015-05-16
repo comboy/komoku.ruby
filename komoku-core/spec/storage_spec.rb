@@ -71,10 +71,25 @@ describe Komoku::Storage do
           end
         end
 
-        it 'returns last value' do
+        it 'gets' do
           @storage.put :foo, 1
           @storage.put :foo, 2
           @storage.get(:foo).should == 2
+        end
+
+        it 'returns last value' do
+          #TODO check time
+          @storage.put :foo, 1
+          @storage.put :foo, 2
+          @storage.last(:foo)[1].should == 2
+        end
+
+        it 'returns previous value' do
+          #TODO check time
+          @storage.put :foo, 1
+          @storage.put :foo, 2
+          @storage.put :foo, 2
+          @storage.previous(:foo)[1].should == 1
         end
 
         it 'returns proper data when using :since' do
@@ -274,9 +289,13 @@ describe Komoku::Storage do
 
             ret = @storage.fetch(:foo, since: Time.now - 3000, as: 'timespans')
             ret[0][0].should be_within(1).of t0-600
-            ret[0][1].should be_within(1).of t0-500
+            ret[0][1].should be_within(1).of 100
             ret[1][0].should be_within(1).of t0-200
             ret[1][1].should be_nil
+
+            ret = @storage.fetch(:foo, since: Time.now - 3000, as: 'timespans', value: false)
+            ret[0][0].should be_within(1).of t0-500
+            ret[0][1].should be_within(1).of 300
 
             ret = @storage.fetch(:foo, since: t0-300, as: 'timespans')
             ret[0][0].should be_within(1).of t0-200

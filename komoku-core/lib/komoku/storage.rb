@@ -19,6 +19,17 @@ module Komoku
       @engine.get key.to_s
     end
 
+    # Returrns last [timespan, value]
+    def last(key)
+      @engine.last key.to_s
+    end
+
+    # Return previous stored value. Returns [timestamp, value]
+    # It returns first *different* previous value.
+    def previous(key)
+      @engine.previous key.to_s
+    end
+
     # TODO FIXME total mess
     def fetch(key, opts={}, more_opts={})
       # fetch :foo, :last_24h

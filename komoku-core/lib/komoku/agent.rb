@@ -139,6 +139,26 @@ module Komoku
       end
     end
 
+    def last(key)
+      conversation do
+        send({fetch: {key: scoped_name(key), opts: {single: 'last'}}})
+        # TODO check if not error
+        data = @messages.pop
+        return nil unless data
+        {time: Time.at(data[0]), value: data[1]}
+      end
+    end
+
+    def previous(key)
+      conversation do
+        send({fetch: {key: scoped_name(key), opts: {single: 'previous'}}})
+        # TODO check if not error
+        data = @messages.pop
+        return nil unless data
+        {time: Time.at(data[0]), value: data[1]}
+      end
+    end
+
     # Subscribe to key value changes.
     # Block will be called with 3 arguments: key, current_value, previous_value
     def on_change(key, &block)
@@ -170,12 +190,7 @@ module Komoku
         send({fetch: {key: key, opts: opts}})
         # TODO check if not error
         data = @messages.pop
-        # TODO this time handling is crazy and needs some more sane fix istead of special cases
-        if opts[:as] == 'timespans'
-          data.map {|t, v| [Time.at(t), Time.at(v)] }
-        else
-          data.map {|t, v| [Time.at(t), v] }
-        end
+        data.map {|t, v| [Time.at(t), v] }
       end
     end
 
@@ -263,7 +278,7 @@ module Komoku
               # but then what about subs outside agent scope? should  they be possible?
               # perhaps scope should be some interface... agent.scope('foo')
               Thread.new do handle_error("on change key=#{dp['key']}") do
-                blk.call(dp['key'], dp['curr'], dp['prev'])
+                blk.call symbolize_keys(dp)
               end end
             end
           end

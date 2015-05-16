@@ -65,6 +65,20 @@ describe Komoku::Agent do
     run_websocket_server
     get_agent
 
+    it "is able to fetch the last value" do
+      agent.put(:foo, 123)
+      ret = agent.last :foo
+      ret[:value].should == 123
+    end
+
+    it "is able to fetch the previous value" do
+      agent.put(:foo, 3)
+      agent.put(:foo, 123)
+      agent.put(:foo, 123)
+      ret = agent.previous :foo
+      ret[:value].should == 3
+    end
+
     it "is able to fetch last values" do
       agent.fetch(:foo).should == []
       agent.put(:foo, 6); agent.put(:foo, 9)
@@ -142,6 +156,21 @@ describe Komoku::Agent do
       notified.should == true
     end
 
+    it "provides correct arguments to the block" do
+      agent = Komoku::Agent.new server: ws_url, async: false
+      agent.connect
+      agent.put :foo, 1
+      notified = false
+      agent.on_change(:foo) do |change|
+        change[:key].should == 'foo'
+        change[:curr].should == 2
+        change[:prev].should == 1
+        notified = true
+      end
+      agent.put :foo, 2
+      sleep 0.2 # some time to receive notification
+      notified.should == true
+    end
 
     it "handles exceptions in on change blocks" do
       agent = Komoku::Agent.new server: ws_url, async: false

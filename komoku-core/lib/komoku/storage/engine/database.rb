@@ -33,6 +33,10 @@ module Komoku
           return fetch_timespans(key, opts) if opts[:as] == 'timespans'
           return fetch_bool(key, opts) if key[:type] == 'boolean'
 
+          # TODO API inconsistent return format again:
+          return last(name) if opts[:single] == 'last'
+          return previous(name) if opts[:single] == 'previous'
+
           # below only numeric type
           scope = @db[:numeric_data_points].where(key_id: key[:id])
           scope = scope.where('time > :since', since: opts[:since]) if opts[:since]
@@ -107,31 +111,35 @@ module Komoku
           since = opts[:since]
           since ||= Time.now - 24*3600
 
+          value = opts.keys.include?(:value) ? opts[:value] : true
+          # TODO FIXME it doesn't respect nils, just true false so it's counted wrong
+
           # we assume we want "true" timespans this should actually be an option TODO
           timespans = []
 
+          scope = @db[:boolean_data_points].where(key_id: key[:id])
           # FIXME ugly ugly ugly
 
           ct = since
-          last = @db[:boolean_data_points].where('time < :ct', ct: ct).order(Sequel.desc(:time)).first
-          prev_value = (last && last[:value]) || false
+          last = scope.where('time < :ct', ct: ct).order(Sequel.desc(:time)).first
+          prev_value = (last && last[:value]) || !value
 
 
           loop do
-            if prev_value == true
-              row = @db[:boolean_data_points].where('time > :ct', ct: ct).where(value: false).order(Sequel.asc(:time)).first
+            if prev_value == value
+              row = scope.where('time > :ct', ct: ct).where(value: !value).order(Sequel.asc(:time)).first
               unless row
                 timespans << [ct, nil]
                 break
               end
-              timespans << [ct, row[:time]]
+              timespans << [ct, row[:time]-ct]
               ct = row[:time]
-              prev_value = false
+              prev_value = !value
             else
-              row = @db[:boolean_data_points].where('time > :ct', ct: ct).where(value: true).order(Sequel.asc(:time)).first
+              row = scope.where('time > :ct', ct: ct).where(value: value).order(Sequel.asc(:time)).first
               break unless row
               ct = row[:time]
-              prev_value = true
+              prev_value = value
             end
           end
 
@@ -171,7 +179,20 @@ module Komoku
           # OPTIMIZE caching
           return nil unless key = get_key(name)
           ret = @db[type_table key[:type]].where(key_id: key[:id]).order(Sequel.desc(:id)).first
+          # TODO abstract away value wrapping
           ret && [ret[:time], key[:type] == 'numeric' ? ret[:value_avg] : ret[:value]]
+        end
+
+        def previous(name)
+          return nil unless key = get_key(name)
+          curr = last(name)
+          return nil unless curr
+          if key[:type] == 'numeric'
+            ret = @db[type_table key[:type]].where(key_id: key[:id]).where('value_avg <> :curr', curr: curr[1]).where('time <= :curr', curr: curr[0]).order(Sequel.desc(:id)).first
+            ret && [ret[:time], key[:type] == 'numeric' ? ret[:value_avg] : ret[:value]]
+          else
+            raise "todo" #TODO
+          end
         end
 
         # TODO I don't like this name, maybe this can be just part of #fetch
