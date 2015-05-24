@@ -30,12 +30,14 @@ module Komoku
         # unless some explicit option (num of points) is provided
         def fetch(name, opts = {})
           return [] unless key = get_key(name)
-          return fetch_timespans(key, opts) if opts[:as] == 'timespans'
-          return fetch_bool(key, opts) if key[:type] == 'boolean'
 
           # TODO API inconsistent return format again:
           return last(name) if opts[:single] == 'last'
           return previous(name) if opts[:single] == 'previous'
+
+          return fetch_timespans(key, opts) if opts[:as] == 'timespans'
+          return fetch_bool(key, opts) if key[:type] == 'boolean'
+
 
           # below only numeric type
           scope = @db[:numeric_data_points].where(key_id: key[:id])
@@ -277,6 +279,7 @@ module Komoku
           obj.kind_of?(String) ? Time.parse(obj) : obj
         end
 
+        # TODO move to Base or storage, definitely not database specific
         def notify_change(key, prev, curr)
           return unless @change_notifications[key]
           prev_time, prev_value = prev
@@ -285,10 +288,10 @@ module Komoku
             # TODO rescue exceptions?
             change = {
               key: key, # provide key in case some pattern matching is implmented later e.g. notify on foo__*
-              prev: prev_value, # APICHANGE seriously these keys sucks
-              curr: curr_value,
-              prev_time: prev_time,
-              curr_time: curr_time
+              curr: curr_value, # FIXME deprecated, kept only for compatibility
+              value: curr_value,
+              time: curr_time,
+              previous_value: prev_value
             }
             block.call(change)
           end

@@ -103,6 +103,8 @@ describe Komoku::Agent do
       agent.put(:foo, 2)
       data = agent.fetch(:foo, since: Time.now - 1)
       data.size.should == 1
+      agent2 = Komoku::Agent.new server: ws_url, scope: 's1', async: false
+      agent2.connect
       data[0].last.should == 2
     end
 
@@ -126,6 +128,19 @@ describe Komoku::Agent do
       agent3.get(:foo).should == nil
       agent1.get(:foo).should == 123
     end
+
+    it "can do something without scope" do
+      agent1 = Komoku::Agent.new server: ws_url, async: false
+      agent1.connect
+      agent1.put :foo, 1
+      agent2 = Komoku::Agent.new server: ws_url, scope: 's1', async: false
+      agent2.connect
+      agent2.put :foo, 2
+      agent1.get(:foo).should == 1
+
+      agent2.put '.foo', 3
+      agent1.get(:foo).should == 3
+    end
   end
 
   context "subscriptions" do
@@ -135,13 +150,17 @@ describe Komoku::Agent do
       agent = Komoku::Agent.new server: ws_url, async: false
       agent.connect
       notified = false
-      agent.on_change(:foo) do |key, curr, prev|
+      cp = nil
+      agent.on_change(:foo) do |change|
+        cp = change
         notified = true
-        key.should == 'foo'
-        prev.should == nil
-        curr.should == 2
       end
       agent.put :foo, 2
+      sleep 0.2
+      notified.should == true
+      cp[:key].should == 'foo'
+      cp[:value].should == 2
+      cp[:time].should be_within(1).of Time.now.to_f
     end
 
     it "handles on change from different agent" do
@@ -163,8 +182,8 @@ describe Komoku::Agent do
       notified = false
       agent.on_change(:foo) do |change|
         change[:key].should == 'foo'
-        change[:curr].should == 2
-        change[:prev].should == 1
+        change[:value].should == 2
+        change[:previous_value].should == 1
         notified = true
       end
       agent.put :foo, 2

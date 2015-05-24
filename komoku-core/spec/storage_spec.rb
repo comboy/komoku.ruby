@@ -356,8 +356,8 @@ describe Komoku::Storage do
           notified = false
           @storage.on_change(:foo) do |change|
             change[:key].should == 'foo'
-            change[:prev].should == 1
-            change[:curr].should == 2
+            change[:previous_value].should == 1
+            change[:value].should == 2
             notified = true
           end
           @storage.put :foo, 2

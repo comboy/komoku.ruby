@@ -290,6 +290,7 @@ module Komoku
 
     # prepend key name with scope if there is some scope set
     def scoped_name(name)
+      return name[1..-1] if name[0].chr == Komoku::Core::SCOPE_SEPARATOR
       @scope ? "#{@scope}#{Komoku::Core::SCOPE_SEPARATOR}#{name}" : name.to_s
     end
 

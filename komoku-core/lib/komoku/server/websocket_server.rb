@@ -87,43 +87,60 @@ module Komoku
         end
 
         port   = opts[:port] || 7373 # TODO config
-        secure = false # ARGV[1] == 'ssl'
-        engine = 'puma'
+        secure = !!opts[:ssl] #false # ARGV[1] == 'ssl'
+        engine = opts[:adapter] || 'puma'
 
         Faye::WebSocket.load_adapter(engine)
 
         # copy paste for handling different kind of engines
         # https://github.com/faye/faye-websocket-ruby/blob/master/examples/server.rb
 
-        # Puma version
-        events = Puma::Events.new($stdout, $stderr)
-        binder = Puma::Binder.new(events)
-        binder.parse(["tcp://0.0.0.0:#{port}"], App) # FIXME configurable listen addr
-        server = Puma::Server.new(app, events)
-        @server = server
-        server.binder = binder
-        @thread = server.run # join
-        true
+        case engine
+
+        when 'puma'
+
+          # Puma version
+          events = Puma::Events.new($stdout, $stderr)
+          binder = Puma::Binder.new(events)
+          binder.parse(["tcp://0.0.0.0:#{port}"], App) # FIXME configurable listen addr
+          #binder.parse(["ssl://0.0.0.0:#{port}?key=/comboy/projects/komoku/komoku-core/tmp/ssl/server.key&cert=/comboy/projects/komoku/komoku-core/tmp/ssl/server.crt"], App) # FIXME configurable listen addr
+          server = Puma::Server.new(app, events)
+          @server = server
+          server.binder = binder
+          @thread = server.run # join
+          true
+
+        when 'thin'
 
         # Thin
-        #EventMachine.schedule do
-          #trap("INT") do
-            #EventMachine.stop
-            #exit
-          #end
-        #end
+          EventMachine.schedule do
+            trap("INT") do
+              EventMachine.stop
+              exit
+            end
+          end
 
-        #EM.run do
-          #thin = Rack::Handler.get('thin')
-          #thin.run(App, :Port => port) do |server|
-            ##server.ssl_options = {
-            ##  :private_key_file => 'tmp/key.pem',
-            ##  :cert_chain_file  => 'tmp/cert.pem'
-            ##}
-            ##server.ssl = true
-          #end
-        #end
-      end
+          @thread = Thread.new do
+            EM.run do
+              thin = Rack::Handler.get('thin')
+              thin.run(app, :Port => port) do |server|
+                if secure
+                  server.ssl_options = {
+                    :private_key_file => opts[:ssl_key],
+                    :cert_chain_file  => opts[:ssl_cert]
+                  }
+                  server.ssl = true
+                end
+              end
+            end
+          end
+
+        else
+
+          raise "unknown adapter"
+
+        end # case
+      end #start
 
     end # WobsocketServer
 
