@@ -123,7 +123,7 @@ module Komoku
           @thread = Thread.new do
             EM.run do
               thin = Rack::Handler.get('thin')
-              thin.run(app, :Port => port) do |server|
+              thin.run(app, :Port => port, :Host => '0.0.0.0') do |server|
                 if secure
                   server.ssl_options = {
                     :private_key_file => opts[:ssl_key],

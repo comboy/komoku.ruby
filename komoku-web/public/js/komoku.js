@@ -3,8 +3,8 @@ var komokuApp = angular.module('komokuApp', []);
 
 komokuApp.controller('KomokuCtrl', function ($scope, $http) {
 
-  dyGraphs = {}
-  dyGraphsData = {}
+  Graphs = {}
+  GraphsData = {}
 
   $scope.selectKey = function(key) {
     $scope.selectedKey = key
@@ -15,24 +15,60 @@ komokuApp.controller('KomokuCtrl', function ($scope, $http) {
       angular.forEach(data, function(data, key) {
         if (data.length > 0) {
           ddata = []
+          xdata = ['x']
+          ydata = ['data']
           angular.forEach(data, function(value) {
-            ddata.push([
-              new Date(value[0]),
-              value[1]
-            ])
+            xdata.push(value[0]*1000)
+            ydata.push(value[1]) 
           })
-          dyGraphsData[key] = ddata
-          dyGraphs[key].updateOptions({'file': ddata})
+          Graphs[key].load({columns: [xdata, ydata]})
         } else {} // TODO display no data msg
       })
     });
   }
+
+  // prepare graps
+  graphsTimespans = {
+    'last_hour': {seconds: 3600*1000, format: '%H:%M'},
+    'last_24h': {seconds: 3600*24*1000, format: '%H:%M'},
+    'last_month': {seconds: 31*3600*24*1000, format: '%Y-%m-%d'},
+  }
+
+  angular.forEach(graphsTimespans, function(value, key) {
+    Graphs[key] = c3.generate({
+      bindto: "#graph_"+key,
+      data: {
+        empty: {
+          label: {
+            text: "No Data"
+          }
+        },
+        x: 'x',
+        columns: [
+          ['x', 0]
+          ['data', 0]
+        ]
+      },
+      axis: {
+        x: {
+          type: 'timeseries',
+          tick: {
+            format: value.format,
+            culling: {
+              max: 5
+            }
+          }
+        }
+      }
+    });
+  })
 
   // Fetch keys list
   $http.get('keys.json').success(function(data) {
     $scope.keys = data;
   });
 
+  console.log("about to subscribe")
   // Subscribe to key changes
   source = new EventSource('/subscribe');
   source.addEventListener('message', function (event) {
@@ -41,29 +77,20 @@ komokuApp.controller('KomokuCtrl', function ($scope, $http) {
     $scope.keys[data.key].value = data.value
     if ($scope.selectedKey == data.key) {
       $scope.lastPoints.push([new Date(), data.value])
-      angular.forEach(dyGraphsData, function(points, key) {
-        points.push([new Date(), data.value])
-        dyGraphs[key].updateOptions({'file': points})
+
+      // update charts
+      angular.forEach(graphsTimespans, function(opts, key) {
+        // TODO replace last point if prev time < step
+        Graphs[key].flow({
+          columns: [
+            ['x', new Date()],
+            ['data', data.value]
+          ]
+        })
       })
-      // TODO also updates charts and stuff
     }
     $scope.$apply()
   }, false);
-
-  // prepare graps
-  graphsTimespans = {
-    'last_hour': new Date(new Date() - 3600*1000),
-    'last_24h': new Date(new Date() - 3600*24*1000),
-    'last_month': new Date(new Date() - 31*3600*24*1000),
-  }
-
-  angular.forEach(graphsTimespans, function(value, key) {
-    dyGraphs[key] = new Dygraph(document.getElementById("dygraph_"+key), [],
-    {
-      dateWindow: [value, new Date()],
-      labels: ['Time', 'Value']
-    });
-  })
 
 
 });

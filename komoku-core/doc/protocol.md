@@ -47,20 +47,20 @@ Along with current values:
 
 To subscribe:
 
-   <= {sub: {key: 'foo'}}
-   => ack
+    <= {sub: {key: 'foo'}}
+    => ack
 
 After that, at any point (even during a conversation), you can receive a message like this:
 
-   => {pub: {key: 'foo', value: 234, time: 1432469276, previous_value: 123}}
+    => {pub: {key: 'foo', value: 234, time: 1432469276, previous_value: 123}}
 
 ### Fetch historical values
 
 This API is very very likely to change, current one looks something like this:
 
-   <= {fetch: {key: 'foo', since: 1432469276, step: '6H'}}
-   => [[1432469276, 123], [1432490876, 234]]
+    <= {fetch: {key: 'foo', since: 1432469276, step: '6H'}}
+    => [[1432469276, 123], [1432490876, 234]]
  
 
-   <= {fetch: {key: 'bar', since: 1432469276, as: 'timespans'}}
-   => [[1432469276, 1432469286], [1432490876, 1432492876]]
+    <= {fetch: {key: 'bar', since: 1432469276, as: 'timespans'}}
+    => [[1432469276, 1432469286], [1432490876, 1432492876]]
