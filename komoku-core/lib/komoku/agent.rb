@@ -41,6 +41,10 @@ module Komoku
       # Since there is no indication in protocl what is response to what we must 
       # always wait for response before sending another thing
       @conn_lock = Mutex.new
+
+      # Lazy keys. When you call #lazy_get it doesn't query the server.
+      # Instead it subscribes to changes and instantly returns cached value.
+      @lazy = {}
     end
 
     # Connect to server, blocking
@@ -128,15 +132,31 @@ module Komoku
       end
     end
 
-    def get(key)
+    def get(key, opts={})
       logger.info "get :#{key}"
-      conversation do
-        logger.debug "  lock aquired"
-        send({get: {key: scoped_name(key)}})
-        # TODO check if not error
-        # TODO we may need to convert it to proper value type I guess?
-        @messages.pop
+      if opts[:lazy] 
+        lazy_get(key)
+      else
+        conversation do
+          logger.debug "  lock aquired"
+          send({get: {key: scoped_name(key)}})
+          # TODO check if not error
+          # TODO we may need to convert it to proper value type I guess?
+          @messages.pop
+        end
       end
+    end
+
+    def lazy_get(key)
+      key = key.to_s
+      if !@lazy.keys.include?(key)
+        @lazy[key] = get(key)
+        # we need to set up listening
+        on_change(key) do |change|
+          @lazy[key] = change[:value]
+        end
+      end
+      @lazy[key]
     end
 
     def last(key)
@@ -181,6 +201,14 @@ module Komoku
         # TODO check if not error
         ret = @messages.pop
         ret.merge(ret) {|k,v| symbolize_keys v}
+      end
+    end
+
+    def stats
+      conversation do
+        send({stats: {}})
+        ret = @messages.pop
+        symbolize_keys ret
       end
     end
 
@@ -298,7 +326,7 @@ module Komoku
     def symbolize_keys(hash)
       hash.inject({}){|result, (key, value)|
         new_key = key.kind_of?(String) ? key.to_sym : key
-        new_value = value.kind_of?(Hash) ? symoblize_keys(value) : value
+        new_value = value.kind_of?(Hash) ? symbolize_keys(value) : value
         result[new_key] = new_value
         result
       }

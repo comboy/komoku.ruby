@@ -5,9 +5,14 @@ module Komoku
     def initialize(opts={})
       # use seqlite in memory engine if nothing is provided
       @engine = opts[:engine] || Komoku::Storage::Engine::Database.new(db: Sequel.sqlite)
+      @start_time = Time.now
+      # TODO stats should probably be optional, default just counters, but with additional option
+      # we could use some internal key to store number of operations per minute and stuff
+      @ops_count = Hash.new(0)
     end
 
     def put(key, value, time = Time.now)
+      @ops_count[:put] += 1
       # TODO key name validation
       @engine.put key.to_s, value, time
       # TODO cache
@@ -16,6 +21,7 @@ module Komoku
     # Returns last value of the key
     def get(key)
       # TODO cache
+      @ops_count[:get] += 1
       @engine.get key.to_s
     end
 
@@ -89,7 +95,9 @@ module Komoku
 
     def stats
       common_stats = {
-        keys_count: keys.count
+        keys_count: keys.count,
+        uptime: (Time.now - @start_time).to_i,
+        ops_count: @ops_count,
       }.merge(@engine.stats || {})
     end
 

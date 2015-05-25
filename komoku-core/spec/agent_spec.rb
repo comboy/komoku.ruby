@@ -58,7 +58,41 @@ describe Komoku::Agent do
       agent.fetch(:foo)[0].first.should be_kind_of Time
       agent.fetch(:foo)[0].first.to_i.should == t.to_i
     end
+  end
 
+  context "lazy get" do
+    run_websocket_server
+    get_agent
+
+    it "can do something without scope" do
+      agent1 = Komoku::Agent.new server: ws_url, async: false
+      agent1.connect
+      agent1.put :foo, 1
+      agent2 = Komoku::Agent.new server: ws_url, async: false
+      agent2.connect
+      agent2.lazy_get(:foo).should == 1
+
+      agent1.put :foo, 2
+      sleep 0.1
+      # make sure no query is done
+      get_count = agent2.stats[:ops_count][:get]
+      agent2.lazy_get(:foo).should == 2
+      agent2.stats[:ops_count][:get].should == get_count
+    end
+
+    it "receives proper stats" do
+      s = agent.stats[:ops_count]
+      get_count = s[:get].to_i
+      put_count = s[:put].to_i
+
+      agent.put :foo, 3
+      agent.put :foo, 4
+      3.times { agent.get :foo }
+
+      s = agent.stats[:ops_count]
+      s[:put].should == (put_count + 2)
+      s[:get].should == (get_count + 3)
+    end
   end
 
   context "fetch data" do
