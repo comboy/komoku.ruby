@@ -133,10 +133,10 @@ module Komoku
     end
 
     def get(key, opts={})
-      logger.info "get :#{key}"
       if opts[:lazy] 
         lazy_get(key)
       else
+        logger.info "get :#{key}"
         conversation do
           logger.debug "  lock aquired"
           send({get: {key: scoped_name(key)}})
@@ -240,7 +240,7 @@ module Komoku
 
     protected
 
-    def send(msg)
+    def send(msg) # TODO rename
       raise "no connection" unless connected?
       logger.debug "<= #{msg}"
       @ws.send msg.to_json
