@@ -221,12 +221,58 @@ describe Komoku::Storage do
           key[:opts][:max_time].should == 100
         end
 
-        it 'does defin_key string type' do
+        it 'stores opts provided in define' do
+          @storage.define_key(:woop, type: :uptime, max_time: 2)
+          key = @storage.key_opts('woop')
+          key[:type].should == 'uptime'
+          key[:opts][:max_time].should == 2
+        end
+
+        it 'does define_key string type' do
           @storage.define_key(:moo, type: 'string')
           @storage.put :moo, 7
           @storage.get(:moo).should == '7'
         end
+      end
 
+      context 'uptime key type' do
+        before do
+          @storage = Komoku::Storage.new engine: Komoku::Storage::Engine::Database.new(db: @db)
+        end
+
+        it 'changes to false when not bumped' do
+          @storage.define_key(:up, type: :uptime, max_time: 1)
+          @storage.put(:up, true)
+          @storage.get(:up).should == true
+          sleep 0.5
+          @storage.put(:up, true)
+          @storage.get(:up).should == true
+          sleep 1.1
+          @storage.get(:up).should == false
+        end
+
+        # This one is tricky, we don't actually have any way to stop storage currently
+        it 'takes care of checks after boot' do
+          begin
+            db = Sequel.connect('sqlite://tmp/test1.db')
+            storage = Komoku::Storage.new engine: Komoku::Storage::Engine::Database.new(db: db)
+            storage.define_key(:up, type: :uptime, max_time: 0.1)
+            storage.put(:up, true)
+            storage.get(:up).should == true
+            # Since we can't stop it, we just copy database and start new storage based on that, nasty
+            FileUtils.cp('tmp/test1.db','tmp/test2.db')
+            sleep 0.2
+
+            db = Sequel.connect('sqlite://tmp/test2.db')
+            storage2 = Komoku::Storage.new engine: Komoku::Storage::Engine::Database.new(db: db)
+            storage2.get(:up).should == true
+            sleep 0.2
+            storage2.get(:up).should == false # set false by new storage based on the key type and opts
+          ensure
+            FileUtils.rm('tmp/test1.db')
+            FileUtils.rm('tmp/test2.db')
+          end
+        end
       end
 
       context 'fetch' do

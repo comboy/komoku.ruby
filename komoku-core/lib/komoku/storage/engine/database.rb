@@ -3,11 +3,14 @@ require 'sqlite3'
 require 'pg'
 require 'logger'
 require 'time'
+require 'json'
 
 module Komoku
   class Storage
     module Engine
       class Database < Base
+        include Komoku::Helpers
+
         def initialize(opts = {})
           # FIXME custom db types
           # FIXME URI from opts
@@ -16,6 +19,11 @@ module Komoku
           prepare_database
           @change_notifications = {}
           @keys_cache = {}
+
+          # For uptime keys, we need to monitor all true values to set them false when they are not updated
+          @uptime_checks = {}
+          init_uptime_checks
+
           super
         end
 
@@ -157,22 +165,25 @@ module Komoku
           # so we hit db two times for put for new key, that sucks but not as much as some other things (low prior)
           key = get_key name, guess_key_type(value) unless key
 
+          bump_uptime(name, key) if key[:type] == 'uptime' && value == true # TODO move when we have key type classes
+
           if key[:opts][:same_value_resolution] && last_time && time > last_time
             if last_value == value
               return false if (time - last_time) < key[:opts][:same_value_resolution]
             end
           end
 
-          case key[:type]
-          when 'boolean'
-            @db[:boolean_data_points].insert(key_id: key[:id], value: value, time: time)
-          when 'string'
-            @db[:string_data_points].insert(key_id: key[:id], value: value, time: time)
-          else
-            @db[:numeric_data_points].insert(key_id: key[:id], value_avg: value, time: time, value_count: 1, value_max: value, value_min: value)
+          values = { key_id: key[:id], value: value, time: time }
+
+          if key[:type] == 'numeric'
+            values.delete :value
+            values.merge!(value_avg: value, value_count: 1, value_max: value, value_min: value)
           end
 
+          @db[ type_table(key[:type]) ].insert values
+
           # notify about the change
+          # IMPROVE THREADS - with multiple thread last_time may be unreliable and may cause notification not to fire in some rare special case (I guess)
           if @change_notifications[name] && ( last_time.nil? || (time > last_time) && (last_value != value) )
             notify_change name, [last_time, last_value], [time, value]
           end
@@ -251,7 +262,7 @@ module Komoku
           # TODO create_key will probably be used by define, so this could be a good place to check
           # type compatibility and possibility of upgrading opts, otherwise throw an exception
           return false if key = get_key(name)
-          @db[:keys].insert(name: name.to_s, key_type: key_type.to_s)
+          @db[:keys].insert(name: name.to_s, key_type: key_type.to_s, key_opts_json: opts.to_json)
           true
         end
 
@@ -261,19 +272,29 @@ module Komoku
 
         protected
 
+        # This is called for uptime key if current value is true
+        # We need to automatically set false in case true is not called within max_time
+        def bump_uptime(name, key)
+          @uptime_checks[name].kill if @uptime_checks[name]
+
+          # FIXME TODO thread safety,this could be called from 2 places at the same time
+          @uptime_checks[name] = Catcher.thread("uptime check for #{name}") do
+            sleep key[:opts][:max_time]
+            put(name, false, Time.now)
+          end
+        end
+
         # only if key_type is provided, it will create key with given name if it doesn't exist yet
         def get_key(name, key_type=nil)
           name = name.to_s
           return @keys_cache[name] if @keys_cache[name]
 
-          #TODO FIXME key opts should be stored with key and configurable when defining it
-          opts = { # temp defaults
+          opts = { # defaults
             # don't add points with the same value as previous one if they time diff < N
             same_value_resolution: 600
           }
 
-          #TODO only defaults, get those from db
-          type_opts = Hash.new({})
+          type_opts = Hash.new({}) # type defaults TODO move somewhere else
           type_opts[:uptime] = {
             # time without update that is considered as downtime,
             # TODO naming: threshold, freqency, max_gap?
@@ -281,13 +302,24 @@ module Komoku
           }
 
           key = @db[:keys].first(name: name)
+
           if key
             opts.merge! type_opts[ key[:key_type].to_sym ]
+            opts.merge! symbolize_keys(JSON.load(key[:key_opts_json])) if key[:key_opts_json] && !key[:key_opts_json].empty?
             @keys_cache[name] = {id: key[:id], type: key[:key_type]}.merge(opts: opts)
           else
             return nil unless key_type
             raise "key creation failed" unless create_key(name, key_type)
             get_key name
+          end
+        end
+
+        # Called on start to make sure to take care of uptime values that are currently set to true
+        def init_uptime_checks
+          keys = @db[:keys].where(key_type: 'uptime').each do |k|
+            name = k[:name]
+            time, value = last(name)
+            bump_uptime(name, get_key(name)) if value == true
           end
         end
 
@@ -315,8 +347,15 @@ module Komoku
         end
 
         def type_table(type_name)
-          raise "unknown type" unless [:boolean, :numeric, :string].include? type_name.to_sym
-          "#{type_name}_data_points".to_sym
+          prefixes = {
+            boolean: 'boolean',
+            numeric: 'numeric',
+            string: 'string',
+            uptime: 'boolean'
+          }
+          pfx = prefixes[type_name.to_sym]
+          raise "unknown type" unless pfx
+          "#{pfx}_data_points".to_sym
         end
 
         def prepare_database
@@ -330,7 +369,7 @@ module Komoku
             column :dataset_id, :integer, index: true
             column :name, String
             column :key_type, String, index: true
-            column :key_opts, String, text: true
+            column :key_opts_json, String, text: true
           end
 
           @db.create_table?(:numeric_data_points) do

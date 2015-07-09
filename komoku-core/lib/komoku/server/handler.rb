@@ -3,6 +3,9 @@ module Komoku
   class Server
 
     class Handler
+
+      include Helpers
+
       # TODO think about args, maybe storage as first arg
       def initialize(opts = {})
         @storage = opts[:storage]
@@ -113,15 +116,6 @@ module Komoku
         end
       end
 
-      # TODO move to some comomn helpers
-      def symbolize_keys(hash)
-        hash.inject({}){|result, (key, value)|
-          new_key = key.kind_of?(String) ? key.to_sym : key
-          new_value = value.kind_of?(Hash) ? symoblize_keys(value) : value
-          result[new_key] = new_value
-          result
-        }
-      end
     end # Handler
 
   end

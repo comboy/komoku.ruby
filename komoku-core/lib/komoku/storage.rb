@@ -1,3 +1,4 @@
+require_relative 'helpers' 
 require_relative 'storage/engine'
 
 module Komoku
@@ -9,6 +10,11 @@ module Komoku
       # TODO stats should probably be optional, default just counters, but with additional option
       # we could use some internal key to store number of operations per minute and stuff
       @ops_count = Hash.new(0)
+    end
+
+    def init_uptime_checks
+      # TODO 
+      # uptime_keys = keys.select {|k,o| o[:type] == 'uptime'}
     end
 
     def put(key, value, time = Time.now)
