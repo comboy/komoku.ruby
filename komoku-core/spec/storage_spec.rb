@@ -214,6 +214,19 @@ describe Komoku::Storage do
           @storage.get(:bar).should == 2
         end
 
+        it 'does define_key uptime' do
+          @storage.define_key(:foobar, type: :uptime)
+          key = @storage.key_opts('foobar')
+          key[:type].should == 'uptime'
+          key[:opts][:max_time].should == 100
+        end
+
+        it 'does defin_key string type' do
+          @storage.define_key(:moo, type: 'string')
+          @storage.put :moo, 7
+          @storage.get(:moo).should == '7'
+        end
+
       end
 
       context 'fetch' do

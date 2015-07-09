@@ -204,6 +204,17 @@ module Komoku
       end
     end
 
+    def define_keys(keys)
+      keys.each_pair do |key, opts|
+        conversation do
+          # TODO N queries, should be single one
+          send({define: {key => opts}})
+          @messages.pop
+          # TODO verify message check if OK
+        end
+      end
+    end
+
     def stats
       conversation do
         send({stats: {}})

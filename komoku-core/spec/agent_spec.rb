@@ -143,6 +143,21 @@ describe Komoku::Agent do
     end
 
   end
+ 
+  context "define keys" do
+    run_websocket_server
+    get_agent
+
+    it "defines string key type" do
+      ret = agent.define_keys({
+        foo: {type: 'string'}
+      })
+      agent.put :foo, 3
+      agent.get(:foo).should == '3'
+      # second define with the same type does nothing (no error)
+      ret = agent.define_keys({ foo: {type: 'string'} })
+    end
+  end
 
   context "scopes" do
     # TODO run it on something less heavy

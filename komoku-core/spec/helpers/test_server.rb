@@ -47,5 +47,6 @@ OptionParser.new do |opts|
 end.parse!
 
 Komoku::Server::WebsocketServer.logger = FakeSlowLogger.new options[:lag] if options[:lag]
+#Komoku::Server::WebsocketServer.logger = Logger.new STDOUT
 Komoku::Server::WebsocketServer.start options
 sleep

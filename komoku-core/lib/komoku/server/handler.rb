@@ -65,9 +65,22 @@ module Komoku
             send 'err' # no key or event
           end
           send 'ack'
-
+        # => {define: {foo: {type: 'numeric}}}
+        # <= 'ack' # FIXME should be more detailed and per key
+        when 'define'
+          #TODO filter opts to include only valid ones and err otherwise
+          data['define'].each_pair do |key, opts|
+            @storage.define_key key, symbolize_keys(opts)
+          end
+          # TODO error handling, better response
+          send 'ack'
+        else
+          send 'err' # TODO better error handling
         # TODO unsubscribe method
         end
+      rescue Exception => e
+        send 'err' # FIXME sane exception handling, we need some details and stuff
+        raise e
       end
 
       # TODO Serialization should probablyhappen in WebsocketServer or other type of server

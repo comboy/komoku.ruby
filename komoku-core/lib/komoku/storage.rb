@@ -54,12 +54,31 @@ module Komoku
       @engine.fetch(key, o.merge(limit: 100))
     end
 
+    # Define new key (unlike create_key can be used to update key attributes)
+    def define_key(name, opts)
+      key_type = opts.delete :type
+      raise "no type provided" unless key_type
+      key = key_opts name
+      if key
+        # TODO check if opts match existing ones
+        # type cannot be changed, some opts can be altered
+      else
+        key = create_key name, key_type, opts
+      end
+    end
+
+    # Returns information about the key or nil
+    # FIXME this name really sucks
+    def key_opts(name)
+      @engine.key_opts(name)
+    end
+
     # FIXME rename maybe integarte into #fetch
     def fetch_timespans(key, opts={})
       @engine.fetch_timespans(key, opts)
     end
 
-    # Define key
+    # Create key
     def create_key(key, key_type, opts={})
       # TODO key name validation
       @engine.create_key key.to_s, key_type, opts
@@ -82,6 +101,7 @@ module Komoku
 
     # List all stored keys as a hash
     # TODO we probably would normally only want those used within some latest timespan?
+    # TODO keys should return opts just like database#get_key does
     def keys(opts = {})
       keys_hash = @engine.keys(opts)
       if opts[:include] && opts[:include].map(&:to_sym).include?(:value)

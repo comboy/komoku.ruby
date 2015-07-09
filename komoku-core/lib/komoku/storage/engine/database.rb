@@ -152,7 +152,10 @@ module Komoku
         def put(name, value, time)
           last_time, last_value = last(name) # TODO cahe it, cache it hard
 
-          key = get_key name, guess_key_type(value)
+          key = get_key name
+          # get_key with type provided creates key if it doesn't exist
+          # so we hit db two times for put for new key, that sucks but not as much as some other things (low prior)
+          key = get_key name, guess_key_type(value) unless key
 
           if key[:opts][:same_value_resolution] && last_time && time > last_time
             if last_value == value
@@ -206,6 +209,7 @@ module Komoku
           end
         end
 
+
         # Return list of all stored keys
         def keys(opts = {})
           # TODO keys are strings, type is symbol, inconsistent
@@ -247,13 +251,17 @@ module Komoku
           # TODO create_key will probably be used by define, so this could be a good place to check
           # type compatibility and possibility of upgrading opts, otherwise throw an exception
           return false if key = get_key(name)
-          @db[:keys].insert(name: name, key_type: key_type)
+          @db[:keys].insert(name: name.to_s, key_type: key_type.to_s)
           true
+        end
+
+        def key_opts(name)
+          get_key(name)
         end
 
         protected
 
-        # if key_type is provided, it will create key with given name if it doesn't exist yet
+        # only if key_type is provided, it will create key with given name if it doesn't exist yet
         def get_key(name, key_type=nil)
           name = name.to_s
           return @keys_cache[name] if @keys_cache[name]
@@ -264,9 +272,18 @@ module Komoku
             same_value_resolution: 600
           }
 
+          #TODO only defaults, get those from db
+          type_opts = Hash.new({})
+          type_opts[:uptime] = {
+            # time without update that is considered as downtime,
+            # TODO naming: threshold, freqency, max_gap?
+            max_time: 100
+          }
+
           key = @db[:keys].first(name: name)
           if key
-            @keys_cache[name] = {id: key[:id], type: key[:key_type]}.merge opts: opts
+            opts.merge! type_opts[ key[:key_type].to_sym ]
+            @keys_cache[name] = {id: key[:id], type: key[:key_type]}.merge(opts: opts)
           else
             return nil unless key_type
             raise "key creation failed" unless create_key(name, key_type)
@@ -309,11 +326,11 @@ module Komoku
           end
 
           @db.create_table?(:keys) do
-            #column :id, :primary_key
             primary_key :id
             column :dataset_id, :integer, index: true
             column :name, String
             column :key_type, String, index: true
+            column :key_opts, String, text: true
           end
 
           @db.create_table?(:numeric_data_points) do
