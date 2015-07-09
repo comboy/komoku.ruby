@@ -208,7 +208,7 @@ module Komoku
       keys.each_pair do |key, opts|
         conversation do
           # TODO N queries, should be single one
-          send({define: {key => opts}})
+          send({define: {scoped_name(key) => opts}})
           @messages.pop
           # TODO verify message check if OK
         end

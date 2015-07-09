@@ -157,6 +157,14 @@ describe Komoku::Agent do
       # second define with the same type does nothing (no error)
       ret = agent.define_keys({ foo: {type: 'string'} })
     end
+
+    it "respects scope" do
+      agent1 = Komoku::Agent.new server: ws_url, async: false, scope: 'two'
+      agent1.connect
+      agent1.define_keys('foo' => {type: 'string'})
+      agent.put 'two.foo', 2
+      agent.get('two.foo').should == '2'
+    end
   end
 
   context "scopes" do

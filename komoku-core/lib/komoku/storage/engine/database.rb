@@ -159,13 +159,14 @@ module Komoku
         # TODO handle conflicting names of different data types
         def put(name, value, time)
           last_time, last_value = last(name) # TODO cahe it, cache it hard
+          is_newest = last_time.nil? || (time > last_time)
 
           key = get_key name
           # get_key with type provided creates key if it doesn't exist
           # so we hit db two times for put for new key, that sucks but not as much as some other things (low prior)
           key = get_key name, guess_key_type(value) unless key
 
-          bump_uptime(name, key) if key[:type] == 'uptime' && value == true # TODO move when we have key type classes
+          bump_uptime(name, key) if key[:type] == 'uptime' && value == true && is_newest # TODO move when we have key type classes
 
           if key[:opts][:same_value_resolution] && last_time && time > last_time
             if last_value == value
@@ -184,7 +185,7 @@ module Komoku
 
           # notify about the change
           # IMPROVE THREADS - with multiple thread last_time may be unreliable and may cause notification not to fire in some rare special case (I guess)
-          if @change_notifications[name] && ( last_time.nil? || (time > last_time) && (last_value != value) )
+          if @change_notifications[name] && is_newest && (last_value != value)
             notify_change name, [last_time, last_value], [time, value]
           end
 
