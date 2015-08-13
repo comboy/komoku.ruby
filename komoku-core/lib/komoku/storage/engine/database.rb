@@ -272,6 +272,14 @@ module Komoku
           true
         end
 
+        def update_key(name, key_type, opts={})
+          key = get_key(name)
+          return false unless key
+          raise "cannot update type" unless key_type == key[:type]
+          @db[:keys].where(id: key[:id]).update(key_opts_json: opts.to_json)
+          true
+        end
+
         def key_opts(name)
           get_key(name)
         end

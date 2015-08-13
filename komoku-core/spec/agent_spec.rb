@@ -177,6 +177,13 @@ describe Komoku::Agent do
       agent.keys.keys.should include('moo')
       agent.keys['moo'][:opts][:max_time].should == 77
     end
+
+    it "sholud update opts" do
+      agent.define_keys({ boo: {type: 'uptime', max_time: 123} })
+      agent.keys['boo'][:opts][:max_time].should == 123
+      agent.define_keys({ boo: {type: 'uptime', max_time: 456} })
+      agent.keys['boo'][:opts][:max_time].should == 456
+    end
   end
 
   context "scopes" do

@@ -66,8 +66,9 @@ module Komoku
       raise "no type provided" unless key_type
       key = key_opts name
       if key
-        # TODO check if opts match existing ones
-        # type cannot be changed, some opts can be altered
+        new_opts = key[:opts].merge(opts)
+        # TODO probably not all opts can be updated and updating some may require some additional actions
+        @engine.update_key(name, key_type, new_opts) if new_opts != key[:opts]
       else
         key = create_key name, key_type, opts
       end
