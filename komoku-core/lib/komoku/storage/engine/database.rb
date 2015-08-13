@@ -224,8 +224,13 @@ module Komoku
 
         # Return list of all stored keys
         def keys(opts = {})
-          # TODO keys are strings, type is symbol, inconsistent
-          Hash[* @db[:keys].map{|k| [k[:name], {type: k[:key_type]}]}.flatten]
+          Hash[* @db[:keys].map do |k|
+            info =  { type: k[:key_type] }
+            opts = k[:key_opts_json] ? JSON.load(k[:key_opts_json]) : {}
+            info.merge!(opts: opts) if opts != {}
+            [k[:name], info] # becomes name: info_hash
+            end.flatten
+          ]
         end
 
         def stats

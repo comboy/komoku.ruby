@@ -164,7 +164,7 @@ module Komoku
         send({fetch: {key: scoped_name(key), opts: {single: 'last'}}})
         # TODO check if not error
         data = @messages.pop
-        return nil unless data
+        return nil if data.nil? || data.empty?
         {time: Time.at(data[0]), value: data[1]}
       end
     end
@@ -180,14 +180,17 @@ module Komoku
     end
 
     # Subscribe to key value changes.
-    # Block will be called with 3 arguments: key, current_value, previous_value
-    def on_change(key, &block)
+    # Block will be called with hash with keys: :key, :value, :time ond optional :previous_value
+    # If opts[:init] is true, block is called right away with the current key value
+    def on_change(key, opts = {}, &block)
       conversation do
         send({sub: {key: scoped_name(key)}})
         @messages.pop
       end
       @subscriptions[scoped_name(key)] ||= []
       @subscriptions[scoped_name(key)] << block
+      # FIXME last can return nil and then block receives nil instead of hash
+      block.call last(key) if opts[:init] # WARNING it won't work with wildcards
     end
 
     # List all keys present in storage

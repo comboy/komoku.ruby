@@ -107,7 +107,6 @@ module Komoku
 
     # List all stored keys as a hash
     # TODO we probably would normally only want those used within some latest timespan?
-    # TODO keys should return opts just like database#get_key does
     def keys(opts = {})
       keys_hash = @engine.keys(opts)
       if opts[:include] && opts[:include].map(&:to_sym).include?(:value)

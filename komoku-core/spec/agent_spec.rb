@@ -105,6 +105,10 @@ describe Komoku::Agent do
       ret[:value].should == 123
     end
 
+    it "returns nil for #last when there's no last value" do
+      agent.last(:fake).should == nil
+    end
+
     it "is able to fetch the previous value" do
       agent.put(:foo, 3)
       agent.put(:foo, 123)
@@ -164,6 +168,14 @@ describe Komoku::Agent do
       agent1.define_keys('foo' => {type: 'string'})
       agent.put 'two.foo', 2
       agent.get('two.foo').should == '2'
+    end
+
+    it "returns opts when asking for keys" do
+      agent.define_keys({
+        moo: {type: 'uptime', max_time: 77}
+      })
+      agent.keys.keys.should include('moo')
+      agent.keys['moo'][:opts][:max_time].should == 77
     end
   end
 
@@ -277,6 +289,20 @@ describe Komoku::Agent do
       notified.should == true
       moo_get.should == 7
       agent.get(:foo).should == 123
+    end
+
+    it "automatically calls block when init param" do
+      agent = Komoku::Agent.new server: ws_url, async: false
+      agent.connect
+      notified = false
+      agent.put :moo, 7
+      moo_get = nil
+      agent.on_change(:moo, init: true) do |c|
+        moo_get = c[:value]
+        notified = true
+      end
+      notified.should == true
+      moo_get.should == 7
     end
   end
 
