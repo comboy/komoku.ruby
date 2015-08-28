@@ -35,9 +35,10 @@ describe Komoku::Server do
       wsc = ws_client
       wsc.send({sub: {key: 'foo'}}.to_json)
       wsc.send({put: {key: 'foo', value: 1}}.to_json)
-      msgs = Array.new(2) { JSON.load(wsc.read) }
+      msgs = Array.new(3) { JSON.load(wsc.read) }
       msgs[0].should == 'ack'
-      msgs[1]['pub'].should include({'key' => 'foo', 'previous_value' => nil, 'value' => 1})
+      msgs[1].should == 'ack'
+      msgs[2]['pub'].should include({'key' => 'foo', 'previous_value' => nil, 'value' => 1})
     end
 
     it "should clean subscription after client disconnects" do

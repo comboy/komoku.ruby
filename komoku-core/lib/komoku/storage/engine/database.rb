@@ -195,7 +195,7 @@ module Komoku
         def last(name)
           # OPTIMIZE caching
           return nil unless key = get_key(name)
-          ret = @db[type_table key[:type]].where(key_id: key[:id]).order(Sequel.desc(:id)).first
+          ret = @db[type_table key[:type]].where(key_id: key[:id]).order(Sequel.desc(:time)).first
           # TODO abstract away value wrapping
           ret && [ret[:time], key[:type] == 'numeric' ? ret[:value_avg] : ret[:value]]
         end
@@ -348,15 +348,16 @@ module Komoku
           prev_time, prev_value = prev
           curr_time, curr_value = curr
           @change_notifications[key].each do |block|
-            # TODO rescue exceptions?
-            change = {
-              key: key, # provide key in case some pattern matching is implmented later e.g. notify on foo__*
-              curr: curr_value, # FIXME deprecated, kept only for compatibility
-              value: curr_value,
-              time: curr_time,
-              previous_value: prev_value
-            }
-            block.call(change)
+            Catcher.thread("change notification for #{key}") do
+              change = {
+                key: key, # provide key in case some pattern matching is implmented later e.g. notify on foo__*
+                curr: curr_value, # FIXME deprecated, kept only for compatibility
+                value: curr_value,
+                time: curr_time,
+                previous_value: prev_value
+              }
+              block.call(change)
+            end
           end
         end
 

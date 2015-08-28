@@ -84,6 +84,12 @@ describe Komoku::Storage do
           @storage.last(:foo)[1].should == 2
         end
 
+        it 'last value is based on its time, not the time it was stored' do
+          @storage.put :foo, 1
+          @storage.put :foo, 2, Time.now - 10
+          @storage.last(:foo)[1].should == 1
+        end
+
         it 'returns previous value' do
           #TODO check time
           @storage.put :foo, 1
@@ -373,6 +379,7 @@ describe Komoku::Storage do
           notified = false
           @storage.on_change(:foo) { notified = true }
           @storage.put :foo, 2
+          sleep 0.1
           notified.should == true
         end
 
@@ -381,9 +388,11 @@ describe Komoku::Storage do
           notified = false
           @storage.on_change(:foo) { notified = true }
           @storage.put :foo, 2
+          sleep 0.1
           notified.should == true
           notified = false
           @storage.put :foo, 3
+          sleep 0.1
           notified.should == true
         end
 
@@ -391,6 +400,7 @@ describe Komoku::Storage do
           notified = false
           @storage.on_change(:foo) { notified = true }
           @storage.put :foo, 2
+          sleep 0.1
           notified.should == true
         end
 
@@ -420,6 +430,7 @@ describe Komoku::Storage do
             notified = true
           end
           @storage.put :foo, 2
+          sleep 0.1
           notified.should == true
         end
 
@@ -427,10 +438,12 @@ describe Komoku::Storage do
           notified = false
           subscription = @storage.on_change(:foo) { notified = true }
           @storage.put :foo, 2
+          sleep 0.1
           notified.should == true
           notified = false
           @storage.unsubscribe subscription
           @storage.put :foo, 3
+          sleep 0.1
           notified.should == false
         end
 
