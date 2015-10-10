@@ -7,13 +7,13 @@ describe Komoku::Server do
   context 'connection' do
     run_websocket_server
 
-    it "should accept websocket connections" do
+    it "accepts websocket connections" do
       wsc = ws_client
       wsc.connected.should == true
       wsc.close
     end
 
-    it "should store data points" do
+    it "stores data points" do
       wsc = ws_client
 
       wsc.send({put: {key: 'foo', value: 324}}.to_json)
@@ -25,13 +25,13 @@ describe Komoku::Server do
       JSON.load(ret).should == 324
     end
 
-    it "should handle incorrect msgs" do
+    it "handles incorrect msgs" do
       wsc = ws_client
       wsc.send("doesn't look like a json")
       ret = wsc.read
     end
 
-    it "should handle on_change subscription" do
+    it "andles on_change subscription" do
       wsc = ws_client
       wsc.send({sub: {key: 'foo'}}.to_json)
       wsc.send({put: {key: 'foo', value: 1}}.to_json)
@@ -41,7 +41,7 @@ describe Komoku::Server do
       msgs[2]['pub'].should include({'key' => 'foo', 'previous_value' => nil, 'value' => 1})
     end
 
-    it "should clean subscription after client disconnects" do
+    it "cleans subscription after client disconnects" do
       wsc = ws_client
       wsc2 = ws_client
       wsc.send({sub: {key: 'foo'}}.to_json)
@@ -56,7 +56,22 @@ describe Komoku::Server do
       stats['change_notifications_count'].should == 0
     end
 
-    #TODO should handle incorrect msg somehow
+    it "handles multiple commands in an array" do
+      wsc = ws_client
+
+      wsc.send([
+        {put: {key: 'foo', value: 123}},
+        {put: {key: 'bar', value: 321}}].to_json)
+
+      ret = wsc.read
+      JSON.load(ret).should == %w{ack ack}
+
+      wsc.send([
+        {get: {key: 'foo'}},
+        {get: {key: 'bar'}}].to_json)
+      JSON.load(wsc.read).should == [123, 321]
+    end
+
   end
 
   context "handler" do

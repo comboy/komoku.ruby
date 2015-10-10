@@ -15,13 +15,19 @@ module Komoku
       end
 
       def received(data)
-        unless data.kind_of? Hash
+        if data.kind_of? Array
+          send data.map {|d| reply_to(d)}
+        elsif data.kind_of? Hash
+          send reply_to(data)
+        else
           send error: 'Incorrect message'
-          return
         end
+      end
+
+      def reply_to(msg)
 
         # TODO check args
-        case data.keys.first
+        case msg.keys.first
 
         # => {get: {key: 'foo'}}
         # <= 123
@@ -29,35 +35,35 @@ module Komoku
           # TODO helper for wrapping everything like that
           # FIXME API CHANGE - we cannot just be returning values directly, because string would be not recognizable from 'err'
           begin
-            x = @storage.get data['get']['key']
+            x = @storage.get msg['get']['key']
             # TODO agent will need to fetch keys and deserialize this properly i.e. create bigdecimal from string if apropriate
-            send x
+            return x
           rescue
-            send 'err'
+            return 'err'
           end
 
         # => {put: {key: 'foo', value: 'blah'}}
         # <= 'ack'
         when 'put'
-          time = data['put']['time'] ? Time.at(data['put']['time']) : Time.now
-          @storage.put data['put']['key'], data['put']['value'], time
-          send 'ack'
+          time = msg['put']['time'] ? Time.at(msg['put']['time']) : Time.now
+          @storage.put msg['put']['key'], msg['put']['value'], time
+          return 'ack'
 
         when 'keys'
-          send @storage.keys(symbolize_keys(data['keys']))
+          return @storage.keys(symbolize_keys(msg['keys']))
 
         when 'fetch'
           # somebody killed a kitten somewhere because of the line below FIXME
-          data['fetch']['opts']['since'] = Time.at(data['fetch']['opts']['since']) if data['fetch']['opts'] && data['fetch']['opts']['since'] && data['fetch']['opts']['since'].kind_of?(Float)
-          send @storage.fetch data['fetch']['key'], symbolize_keys(data['fetch']['opts'])
+          msg['fetch']['opts']['since'] = Time.at(msg['fetch']['opts']['since']) if msg['fetch']['opts'] && msg['fetch']['opts']['since'] && msg['fetch']['opts']['since'].kind_of?(Float)
+          return @storage.fetch msg['fetch']['key'], symbolize_keys(msg['fetch']['opts'])
 
         when 'stats'
-          send(@storage.stats)
+          return @storage.stats
 
         # => {sub: {event: 'foo'}}
         # <= 'ack'
         when 'sub'
-          s = data['sub']
+          s = msg['sub']
           if s['key']
             @subscriptions << @storage.on_change(s['key']) do |change|
               send({pub: change})
@@ -65,24 +71,25 @@ module Komoku
           elsif s['event']
             # TODO subscribe to event
           else
-            send 'err' # no key or event
+            return 'err' # no key or event
           end
-          send 'ack'
+          return 'ack'
         # => {define: {foo: {type: 'numeric}}}
         # <= 'ack' # FIXME should be more detailed and per key
         when 'define'
           #TODO filter opts to include only valid ones and err otherwise
-          data['define'].each_pair do |key, opts|
+          msg['define'].each_pair do |key, opts|
             @storage.define_key key, symbolize_keys(opts)
           end
           # TODO error handling, better response
-          send 'ack'
+          return 'ack'
         else
-          send 'err' # TODO better error handling
+          return 'err' # TODO better error handling
         # TODO unsubscribe method
         end
       rescue Exception => e
-        send 'err' # FIXME sane exception handling, we need some details and stuff
+        return 'err' # FIXME sane exception handling, we need some details and stuff
+        # FIXME after switching from send to return this is not called anymore. In case of exception other than JSON parsing it must go to logs FIXME
         raise e
       end
 
