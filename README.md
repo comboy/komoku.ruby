@@ -1,3 +1,7 @@
+## Deprecated. I already rewrote most of it to elixir. Check https://github.com/comboy/komoku . Ruby client is still compatible with the new server. 
+
+---
+
 This is not a ready-to-use project. Everything is changing, I don't care about API, I do not version it.
 
 This repo is to be separated into different gems, it's just quicker for now to have everything in one place.
